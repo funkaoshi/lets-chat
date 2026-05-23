@@ -1,5 +1,7 @@
 # Let's Chat — Developer Reference
 
+For the ongoing modernization status (shipped work, open items, known footguns), see [MODERNIZATION.md](MODERNIZATION.md).
+
 ## Project Overview
 
 Self-hosted real-time team chat. Node.js + Express + Socket.IO + MongoDB. Users, rooms, messages, file uploads, @mentions, XMPP integration (optional).

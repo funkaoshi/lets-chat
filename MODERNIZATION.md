@@ -1,0 +1,158 @@
+# Modernization status
+
+Living doc tracking the rolling effort to bring this ~2014 codebase forward.
+Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
+
+## Shipped
+
+| SHA | What |
+|-----|------|
+| `2bde695` | Expand .env.example: cookie secret, db URI, plugin creds |
+| `515b5f8` | Load Docker secrets from optional docker/.env |
+| `5105618` | Move client libs from vendor/ to npm, modernize versions |
+| `dd86552` | Cull build-time CVE chain: remove Grunt/Bower + mongoose-validate |
+| `2a78a87` | Modernize Let's Chat to run on Node 20 + MongoDB 7 in Docker |
+
+### Server-side
+
+- Node engine floor bumped to `>=20`; the app runs under `node:20-bookworm-slim`
+  in Docker against `mongo:7`.
+- Mongoose 4 → 6 (promise-based connect, `MongoStore.create()`).
+- Helmet 2 → 7 (single config object with `directives`).
+- js-yaml 3 → 4 (`safeLoad` → `load`).
+- connect-mongo 1 → 5, async 2 → 3, passport, uuid, nunjucks all current.
+- `new Buffer()` → `Buffer.from()`.
+- `mongoose-validate` (unmaintained since 2014, locked `validator` to a
+  vulnerable version) replaced with a Mongoose `match:` regex.
+
+### Build / packaging
+
+- Grunt + bower + grunt-bower-task removed (devDeps + Gruntfile.js + bower.json
+  deleted). They only existed to re-fetch the client vendor files that were
+  already committed.
+- `media/js/vendor/` (45 files, ~64K lines, 2.1 MB) deleted.
+- 13 client libs moved to `package.json` and served via connect-assets out
+  of `node_modules/`.
+- 4 orphan libs (JVFloat, backbone.keys, atwho, desktop-notifications)
+  relocated to `media/js/legacy/`.
+
+### Client-side version bumps
+
+- jQuery 2.1.3 → 3.7.1
+- Backbone 1.1.2 → 1.6.1
+- Handlebars 2.0 → 4.7.9
+- lodash 2.4.1 → 4.18.1
+- Bootstrap 3.1.1 → 3.4.1 (intentionally pinned to last 3.x)
+- moment 2.8 → 2.30, dropzone 4 → 5.9, selectize fork 0.15.2,
+  store.js → store2, jquery-validation 1.22, favico.js 0.3.10
+- sweetalert v1 → **sweetalert2 v11** with a small shim
+  ([media/js/legacy/sweetalert-shim.js](media/js/legacy/sweetalert-shim.js))
+  that maps the legacy `swal('title','text','type')` and
+  `swal({...}, callback)` signatures onto sweetalert2's Promise API,
+  so the 22 existing call sites don't need to change.
+- socket.io-client **pinned at ^1.7.4** — must match the server's
+  Socket.IO 1.x (required by `express.oi` 0.0.21).
+
+### Breaking-change fixes uncovered during smoke test
+
+- lodash 4 dropped the `thisArg` parameter that lodash 2 supported on
+  `_.each`/`_.map`. Four sites silently lost `this` context — fixed via
+  `_.bind(fn, this)` in [media/js/client.js](media/js/client.js),
+  [media/js/views/upload.js](media/js/views/upload.js), and
+  [media/js/views/room.js](media/js/views/room.js).
+- Same pattern inside [media/js/legacy/backbone.keys.js](media/js/legacy/backbone.keys.js).
+- lodash 4 `_.contains` → `_.includes`, `_.all` → `_.every` (both hit in
+  backbone.keys).
+- jQuery 3 removed `.unbind()` — replaced with `.off()` in
+  [media/js/views/room.js](media/js/views/room.js).
+- **The big one:** RoomView render did `this.$el = $(template(...))` instead
+  of `this.setElement(...)`. Backbone delegated handlers (keypress to send a
+  message, click `.show-edit-room`, etc.) stayed bound to the empty `<div>`
+  Backbone created at construction, while the rendered content lived on a
+  different DOM node. Send / edit-room all silently no-op'd until `setElement`
+  re-delegated events to the actual rendered element.
+
+### Docker / config
+
+- `docker/Dockerfile` rewritten on node:20-bookworm-slim, runs as `node` user,
+  uses `npm ci --legacy-peer-deps`.
+- `docker/docker-compose.yml` uses modern syntax, explicit project name
+  `lets-chat` (avoids collision with other compose projects), named volumes
+  for Mongo data and uploads, optional `env_file: docker/.env`.
+- `docker/Dockerfile.dockerignore` keeps host `node_modules` out of the build
+  context (BuildKit-native per-Dockerfile dockerignore).
+- `docker/.env` gitignored; [docker/.env.example](docker/.env.example) committed
+  and documents `LCB_SECRETS_COOKIE`, `LCB_GIPHY_API_KEY`, `LCB_DATABASE_URI`,
+  and placeholder LDAP / S3 credential vars. Header explains the
+  camelCase YAML → SNAKE_CASE env var mapping (`giphy.apiKey` ↔
+  `LCB_GIPHY_API_KEY`, not `LCB_GIPHY_APIKEY`).
+
+### CVE delta
+
+| Stage | total | critical | high | mod | low |
+|------|------:|---------:|-----:|----:|----:|
+| Start (after Node 20 bump) | 78 | 19 | 34 | 21 | 4 |
+| After build-time cull | 33 | 4 | 14 | 12 | 3 |
+| Current (post vendor migration + sweetalert2) | 34 | 4 | 14 | 13 | 3 |
+
+Residual 34 are all transitive deps of pinned legacy packages
+(`express.oi`, `passport.socketio`, `connect-assets`, `node-xmpp-server`).
+
+## Known footguns
+
+- **`secrets.cookie` still defaults to `"secretsauce"`** in
+  [defaults.yml](defaults.yml). Every install without an override shares the
+  same session-signing key. [docker/.env.example](docker/.env.example) now
+  documents the override (`LCB_SECRETS_COOKIE`) and recommends
+  `openssl rand -hex 32`, but local `docker/.env` files need to actually set
+  it. **First thing to do on any internet-exposed deployment.**
+- **Giphy API key is rendered into the DOM** as `data-apikey` on every chat
+  page. Fine for a team-only deployment, sketchy for anything public. A
+  "move secret out of client HTML" cleanup is in the open list below.
+
+## Open / deferred
+
+Rough priority order. Sizes are S/M/L/XL where XL is multi-day.
+
+| Item | Size | Notes |
+|------|:----:|-------|
+| Bootstrap 3 → 5 | L | Class renames (`btn-default` → `btn-secondary`, `panel` → `card`, glyphicons gone) across every file in `templates/`. Visible-but-large refactor. Worth its own plan. |
+| express.oi → Express 5 + native Socket.IO 4 | XL | ~30-40 controller handlers use `req.io.route()` / `req.io.respond()`. Multi-day rewrite. Unlocks every other server-side modernization including the Socket.IO upgrade and lifting most residual CVEs. |
+| XMPP removal | S | `app/xmpp/` (11 files) + `node-xmpp-server` dep. Disabled by default; native compilation is fragile. Quick win if the feature is unused. |
+| Multer 1 → 2 | S | Single use site in [app/controllers/files.js](app/controllers/files.js). Low-risk. |
+| ESLint 8 → 9 | S | Config migration to flat config; ESLint 8 is EOL. |
+| moment → dayjs/Luxon | M | moment is maintenance-mode. Surface area used is small. |
+| GitHub Actions CI | S | `.travis.yml` is dead config; no CI runs today. Add a workflow that runs `npm test` on PRs. |
+| Actual tests | XL | No test suite exists. Pre-commit hook runs ESLint only. |
+| Drop jQuery / Backbone (UI rewrite) | XL | 341 jQuery refs, 9 Backbone views. Far-future project. |
+| Move Giphy key out of client HTML | S | Proxy through server, hide key. Quick once you decide on the API shape. |
+
+## Verification baseline
+
+Boot via:
+
+```
+docker compose -f docker/docker-compose.yml up --build -d
+```
+
+App at <http://localhost:8080>. Confirmed working in browser:
+
+- Account registration with email validation
+- Login + session
+- Room creation, joining, archive (confirm modal)
+- Sending messages
+- Edit-room button
+- @-mention autocomplete (atwho)
+- File upload (dropzone)
+- Keyboard shortcuts (backbone.keys)
+- Giphy search (with a valid `LCB_GIPHY_API_KEY` in `docker/.env`)
+
+`npm test` (ESLint) is clean inside the container.
+
+## How this doc gets maintained
+
+Each landed commit moves items between sections. When a new chunk of work
+starts, plan it inline (or in [.claude/plans/](../../.claude/plans/) during a
+plan-mode session) and copy the outcome here once it ships. The goal is one
+place a teammate or future-self can read top-to-bottom to understand where
+the modernization stands.
