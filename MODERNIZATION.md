@@ -7,7 +7,7 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
-| _pending_ | Docker dev flow: bind-mount + `node --watch` override, bootstrap.sh first-run helper |
+| `be515ee` | Docker dev flow: bind-mount + `node --watch` override, bootstrap.sh first-run helper |
 | `f9c263c` | Phase 1: drop XMPP, Multer 2, ESLint 9 flat config, GH Actions CI, fail-fast on default cookie secret |
 | `2bde695` | Expand .env.example: cookie secret, db URI, plugin creds |
 | `515b5f8` | Load Docker secrets from optional docker/.env |
