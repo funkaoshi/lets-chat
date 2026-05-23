@@ -53,7 +53,7 @@
             });
         },
         render: function() {
-            this.$el = $(this.template(_.extend(this.model.toJSON(), {
+            this.setElement(this.template(_.extend(this.model.toJSON(), {
                 sidebar: store.get('sidebar')
             })));
             this.$messages = this.$('.lcb-messages');
@@ -420,7 +420,7 @@
         },
         destroy: function() {
             this.undelegateEvents();
-            this.$el.removeData().unbind();
+            this.$el.removeData().off();
             this.remove();
             Backbone.View.prototype.remove.call(this);
         },
@@ -466,9 +466,9 @@
             this.render();
         },
         render: function() {
-            this.collection.each(function(model) {
+            this.collection.each(_.bind(function(model) {
                 this.add(model.toJSON());
-            }, this);
+            }, this));
             this.count();
         },
         add: function(model) {

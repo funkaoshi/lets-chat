@@ -96,14 +96,14 @@ Dropzone && (Dropzone.autoDiscover = false);
         },
         populateRooms: function() {
             this.selectize.clearOptions();
-            this.rooms.each(function(room) {
+            this.rooms.each(_.bind(function(room) {
                 if (room.get('joined')) {
                     this.selectize.addOption({
                         id: room.id,
                         name: room.get('name')
                     });
                 }
-            }, this);
+            }, this));
         }
     });
 

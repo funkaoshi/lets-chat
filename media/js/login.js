@@ -1,4 +1,4 @@
-//= require vendor/md5/md5.js
+//= require blueimp-md5/js/md5.js
 
 +function() {
 

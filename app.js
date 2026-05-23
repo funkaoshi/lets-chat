@@ -107,7 +107,8 @@ var bundles = {};
 app.use(require('connect-assets')({
     paths: [
         'media/js',
-        'media/less'
+        'media/less',
+        'node_modules'
     ],
     helperContext: bundles,
     build: settings.env === 'production',

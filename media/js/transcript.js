@@ -1,4 +1,4 @@
-//= require vendor/bootstrap-daterangepicker/daterangepicker.js
+//= require bootstrap-daterangepicker/daterangepicker.js
 //= require util/message.js
 //= require views/transcript.js
 
