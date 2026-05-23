@@ -7,11 +7,35 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
+| `f8d5305` | Phase 1: drop XMPP, Multer 2, ESLint 9 flat config, GH Actions CI, fail-fast on default cookie secret |
 | `2bde695` | Expand .env.example: cookie secret, db URI, plugin creds |
 | `515b5f8` | Load Docker secrets from optional docker/.env |
 | `5105618` | Move client libs from vendor/ to npm, modernize versions |
 | `dd86552` | Cull build-time CVE chain: remove Grunt/Bower + mongoose-validate |
 | `2a78a87` | Modernize Let's Chat to run on Node 20 + MongoDB 7 in Docker |
+
+### Phase 1 cleanup (this batch)
+
+- **XMPP removed.** `app/xmpp/` (events + msg-processors), `node-xmpp-server`
+  dep, `xmpp.*` config tree in [defaults.yml](defaults.yml),
+  `addXmppConfHost` step in [app/config.js](app/config.js), the
+  XMPP-active-sessions check in
+  [app/core/account.js](app/core/account.js), and the `xmpp.html` modal +
+  its include in [templates/chat.html](templates/chat.html). Feature was
+  disabled by default and the native build was fragile.
+- **Multer 1 → 2.** Single use site in
+  [app/controllers/files.js](app/controllers/files.js) (`multer.diskStorage({}).any()`)
+  is API-compatible.
+- **ESLint 8 → 9 flat config.** `.eslintrc` + `.eslintignore` →
+  [eslint.config.js](eslint.config.js); added `globals` dev dep.
+- **GitHub Actions CI.** `.travis.yml` (long dead) replaced by
+  [.github/workflows/ci.yml](.github/workflows/ci.yml) running `npm test`
+  + a docker build sanity check on PRs.
+- **Fail-fast on default cookie secret.** [app.js](app.js) refuses to boot
+  if `secrets.cookie` is unset or still `"secretsauce"`. Default flipped
+  to empty in [defaults.yml](defaults.yml) with a guidance comment;
+  [docker/.env.example](docker/.env.example) updated to flag it as
+  required.
 
 ### Server-side
 
@@ -65,6 +89,9 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
   backbone.keys).
 - jQuery 3 removed `.unbind()` — replaced with `.off()` in
   [media/js/views/room.js](media/js/views/room.js).
+- jQuery 3 removed `.andSelf()` (renamed to `.addBack()` in 1.8) — fixed in
+  `toggleSidebar` in [media/js/views/room.js](media/js/views/room.js).
+  The "back to rooms" button was throwing on join.
 - **The big one:** RoomView render did `this.$el = $(template(...))` instead
   of `this.setElement(...)`. Backbone delegated handlers (keypress to send a
   message, click `.show-edit-room`, etc.) stayed bound to the empty `<div>`
@@ -96,16 +123,10 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 | Current (post vendor migration + sweetalert2) | 34 | 4 | 14 | 13 | 3 |
 
 Residual 34 are all transitive deps of pinned legacy packages
-(`express.oi`, `passport.socketio`, `connect-assets`, `node-xmpp-server`).
+(`express.oi`, `passport.socketio`, `connect-assets`).
 
 ## Known footguns
 
-- **`secrets.cookie` still defaults to `"secretsauce"`** in
-  [defaults.yml](defaults.yml). Every install without an override shares the
-  same session-signing key. [docker/.env.example](docker/.env.example) now
-  documents the override (`LCB_SECRETS_COOKIE`) and recommends
-  `openssl rand -hex 32`, but local `docker/.env` files need to actually set
-  it. **First thing to do on any internet-exposed deployment.**
 - **Giphy API key is rendered into the DOM** as `data-apikey` on every chat
   page. Fine for a team-only deployment, sketchy for anything public. A
   "move secret out of client HTML" cleanup is in the open list below.
@@ -118,11 +139,7 @@ Rough priority order. Sizes are S/M/L/XL where XL is multi-day.
 |------|:----:|-------|
 | Bootstrap 3 → 5 | L | Class renames (`btn-default` → `btn-secondary`, `panel` → `card`, glyphicons gone) across every file in `templates/`. Visible-but-large refactor. Worth its own plan. |
 | express.oi → Express 5 + native Socket.IO 4 | XL | ~30-40 controller handlers use `req.io.route()` / `req.io.respond()`. Multi-day rewrite. Unlocks every other server-side modernization including the Socket.IO upgrade and lifting most residual CVEs. |
-| XMPP removal | S | `app/xmpp/` (11 files) + `node-xmpp-server` dep. Disabled by default; native compilation is fragile. Quick win if the feature is unused. |
-| Multer 1 → 2 | S | Single use site in [app/controllers/files.js](app/controllers/files.js). Low-risk. |
-| ESLint 8 → 9 | S | Config migration to flat config; ESLint 8 is EOL. |
 | moment → dayjs/Luxon | M | moment is maintenance-mode. Surface area used is small. |
-| GitHub Actions CI | S | `.travis.yml` is dead config; no CI runs today. Add a workflow that runs `npm test` on PRs. |
 | Actual tests | XL | No test suite exists. Pre-commit hook runs ESLint only. |
 | Drop jQuery / Backbone (UI rewrite) | XL | 341 jQuery refs, 9 Backbone views. Far-future project. |
 | Move Giphy key out of client HTML | S | Proxy through server, hide key. Quick once you decide on the API shape. |

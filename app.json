@@ -5,8 +5,7 @@
     "logo": "http://i.imgur.com/eXTLHNN.png",
     "keywords": [
         "lets",
-        "chat",
-        "xmpp"
+        "chat"
     ],
     "addons": [
         "mongolab"

@@ -16,25 +16,14 @@ https:
   key: key.pem
   cert: certificate.pem
 
-xmpp:
-  enable: false
-  roomCreation: false
-  debug:
-    handled: false
-    unhandled: false
-  port: 5222
-  domain: example.com
-  username: node # node / full
-  tls:
-    enable: false
-    key: ./server.key
-    cert: ./server.crt
-
 database:
   uri: mongodb://localhost/letschat
 
 secrets:
-  cookie: secretsauce
+  # Override via LCB_SECRETS_COOKIE or settings.yml. App refuses to start if
+  # this is unset or left as the legacy default "secretsauce". Generate one:
+  #   openssl rand -hex 32
+  cookie:
 
 files:
   enable: false

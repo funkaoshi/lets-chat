@@ -68,4 +68,3 @@ Named volumes:
 ## Ports
 
 - Host `8080` → container `8080` (HTTP). macOS reserves `5000` for AirPlay, so the legacy default is avoided.
-- XMPP is disabled by default (`xmpp.enable: false` in `defaults.yml`). To enable it, set `LCB_XMPP_ENABLE=true` and expose port 5222.

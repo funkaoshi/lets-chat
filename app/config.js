@@ -123,19 +123,6 @@ var pipeline = [
         recurse('LCB', context.result);
     },
 
-    function addXmppConfHost(context) {
-        // Deprecating xmpp.host in favour of xmpp.domain
-        if (context.result.xmpp.host) {
-            console.log('DEPRECATED: xmpp.host setting has been deprecated, please use xmpp.domain instead');
-            context.result.xmpp.domain = context.result.xmpp.host;
-        }
-
-        if (context.result.xmpp.domain) {
-            context.result.xmpp.confdomain = 'conference.' +
-                                             context.result.xmpp.domain;
-        }
-    },
-
     function overrideEnvSetting(context) {
         if (process.env.NODE_ENV) {
             context.result.env = process.env.NODE_ENV;

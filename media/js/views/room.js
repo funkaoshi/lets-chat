@@ -410,7 +410,7 @@
         toggleSidebar: function(e) {
             e && e.preventDefault && e.preventDefault();
             // Target siblings too!
-            this.$el.siblings('.lcb-room').andSelf().toggleClass('lcb-room-sidebar-opened');
+            this.$el.siblings('.lcb-room').addBack().toggleClass('lcb-room-sidebar-opened');
             // Save to localstorage
             if ($(window).width() > 767) {
                 this.scrollMessages();

@@ -27,6 +27,16 @@ var _ = require('lodash'),
     auth = require('./app/auth/index'),
     core = require('./app/core/index');
 
+if (!settings.secrets || !settings.secrets.cookie ||
+        settings.secrets.cookie === 'secretsauce') {
+    console.error(
+        '\nRefusing to start: secrets.cookie is unset or still the built-in\n' +
+        'default ("secretsauce"). Sessions signed with that key are trivially\n' +
+        'forgeable. Set LCB_SECRETS_COOKIE (or secrets.cookie in settings.yml)\n' +
+        'to a random string, e.g. `openssl rand -hex 32`.\n');
+    process.exit(1);
+}
+
 var httpEnabled = settings.http && settings.http.enable,
     httpsEnabled = settings.https && settings.https.enable,
     models = all(path.resolve('./app/models')),
@@ -220,14 +230,6 @@ function startApp() {
     }
 
     app.listen(port, host);
-
-    //
-    // XMPP
-    //
-    if (settings.xmpp.enable) {
-        var xmpp = require('./app/xmpp/index');
-        xmpp(core);
-    }
 
     var art = fs.readFileSync('./app/misc/art.txt', 'utf8');
     console.log('\n' + art + '\n\n' + 'Release ' + psjon.version.yellow + '\n');

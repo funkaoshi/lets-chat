@@ -4,7 +4,7 @@ For the ongoing modernization status (shipped work, open items, known footguns),
 
 ## Project Overview
 
-Self-hosted real-time team chat. Node.js + Express + Socket.IO + MongoDB. Users, rooms, messages, file uploads, @mentions, XMPP integration (optional).
+Self-hosted real-time team chat. Node.js + Express + Socket.IO + MongoDB. Users, rooms, messages, file uploads, @mentions.
 
 Stack: **express.oi** (Express 4 + Socket.IO 1.x wrapper) · **Mongoose** · **Nunjucks** templates · **Passport** auth · **connect-assets** for LESS/JS bundling.
 
@@ -25,7 +25,7 @@ ESLint runs on the host (no Docker required): `npm test` — assumes `npm ci --l
 
 Config resolution order: env vars (`LCB_*`) > `config/settings.yml` or `settings.yml` > `defaults.yml`.
 
-Key defaults: `database.uri = mongodb://localhost/letschat`, `http.port = 5000` (overridden to `8080` in Docker), `auth.providers = [local]`, `xmpp.enable = false`.
+Key defaults: `database.uri = mongodb://localhost/letschat`, `http.port = 5000` (overridden to `8080` in Docker), `auth.providers = [local]`.
 
 **Port note:** the upstream default is `5000`, but macOS reserves that for AirPlay. The Docker setup uses `8080` to avoid the conflict.
 
@@ -66,7 +66,6 @@ app.io.route('account:login', function(req) { req.io.respond({...}); });
 | `app/controllers/` | Express + Socket.IO route handlers (auto-loaded) |
 | `app/auth/` | Passport strategies: local, LDAP, Kerberos |
 | `app/middlewares/` | Express middleware (requireLogin, etc.) |
-| `app/xmpp/` | XMPP MUC server (optional, disabled by default) |
 | `templates/` | Nunjucks HTML (login.html, chat.html, transcript.html) |
 | `media/js/` | Client-side JavaScript (vendor libs committed under `media/js/vendor/` — no Bower/Grunt build step) |
 | `media/less/` | LESS stylesheets → compiled by connect-assets |
@@ -92,9 +91,8 @@ Multiple providers can be active simultaneously. Bearer token and HTTP Basic aut
 
 - **`express.oi` 0.0.21** — pinned. Wraps Express 4 + Socket.IO 1.x. Do not update; replacing it requires rewriting all controller socket handlers.
 - **`passport.socketio` 3.6.2** — pinned. Session bridge between Passport and Socket.IO 1.x, tied to express.oi.
-- **`node-xmpp-server`** — pinned. Optional; disabled by default (`xmpp.enable: false`). May fail to compile on some systems.
 - **`connect-assets` 5.3.0** — pinned. Bundles LESS and JS. Depends on `less` being present.
 
 ## ESLint
 
-Config in `.eslintrc`. Ignores `media/` and `migrations/`. Run with `npm test`.
+Flat config in `eslint.config.js`. Ignores `media/`. Run with `npm test`.

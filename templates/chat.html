@@ -49,13 +49,6 @@
                             <i class="fa fa-fw fa-bell"></i> <$ __('Notifications') $>
                         </a>
                     </li>
-                    <% if settings.xmpp.enable %>
-                        <li>
-                            <a data-toggle="modal" href="#lcb-xmpp">
-                                <i class="fa fa-fw fa-comments"></i> <$ __('XMPP/Jabber') $>
-                            </a>
-                        </li>
-                    <% endif %>
                     <li>
                         <a data-toggle="modal" href="#lcb-tokens">
                             <i class="fa fa-fw fa-lock"></i> <$ __('Auth Tokens') $>
@@ -125,7 +118,6 @@
         <% include 'includes/modals/notifications.html' %>
         <% include 'includes/modals/profile.html' %>
         <% include 'includes/modals/account.html' %>
-        <% include 'includes/modals/xmpp.html' %>
         <% include 'includes/modals/tokens.html' %>
         <% include 'includes/modals/upload.html' %>
         <% include 'includes/modals/giphy.html' %>
