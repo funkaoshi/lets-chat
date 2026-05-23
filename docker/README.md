@@ -39,15 +39,23 @@ Then open <http://localhost:8080>.
 
 ## Configuration
 
-The container honours all `LCB_*` environment variables. To override defaults, edit `docker-compose.yml` or mount a `settings.yml`:
+The container honours all `LCB_*` environment variables. The preferred way to set secrets and local overrides is via `docker/.env`:
+
+```
+cp docker/.env.example docker/.env
+# edit docker/.env, fill in real values
+docker compose -f docker/docker-compose.yml up -d
+```
+
+`docker/.env` is gitignored. Compose passes everything in it through to the app container. See [.env.example](.env.example) for the format. For the full list of LCB_* variables, see the [environment variables wiki](https://github.com/sdelements/lets-chat/wiki/Environment-variables).
+
+You can also mount a full settings.yml if you prefer:
 
 ```yaml
     volumes:
       - app-uploads:/usr/src/app/uploads
       - ./my-settings.yml:/usr/src/app/config/settings.yml:ro
 ```
-
-See the [environment variables wiki](https://github.com/sdelements/lets-chat/wiki/Environment-variables) for the full list.
 
 ## Persistence
 
