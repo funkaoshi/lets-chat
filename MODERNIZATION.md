@@ -7,6 +7,7 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
+| _pending_ | Docker dev flow: bind-mount + `node --watch` override, bootstrap.sh first-run helper |
 | `f9c263c` | Phase 1: drop XMPP, Multer 2, ESLint 9 flat config, GH Actions CI, fail-fast on default cookie secret |
 | `2bde695` | Expand .env.example: cookie secret, db URI, plugin creds |
 | `515b5f8` | Load Docker secrets from optional docker/.env |
@@ -36,6 +37,22 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
   to empty in [defaults.yml](defaults.yml) with a guidance comment;
   [docker/.env.example](docker/.env.example) updated to flag it as
   required.
+
+### Docker dev flow
+
+- [docker/docker-compose.dev.yml](docker/docker-compose.dev.yml) layered
+  on top of the base compose: bind-mounts the repo into the container and
+  runs the app under `node --watch` (Node 20 built-in, no extra dep).
+  Client edits show on browser refresh, server edits trigger an automatic
+  process restart. Anonymous volume shadows `/usr/src/app/node_modules`
+  so Linux-built modules win over the host's (matters on macOS).
+- [docker/bootstrap.sh](docker/bootstrap.sh): first-run helper that
+  creates `docker/.env` from the example and generates
+  `LCB_SECRETS_COOKIE` via `openssl rand -hex 32`. Idempotent — safe to
+  re-run, never overwrites existing values.
+- [docker/README.md](docker/README.md) and [CLAUDE.md](CLAUDE.md)
+  rewritten to lead with the dev flow and keep the prod-ish flavor as a
+  fallback.
 
 ### Server-side
 

@@ -12,11 +12,22 @@ Stack: **express.oi** (Express 4 + Socket.IO 1.x wrapper) · **Mongoose** · **N
 
 **Use Docker** — the dev environment lives in `docker/` and bundles MongoDB. Do not install Node deps or MongoDB on the host.
 
+First-time setup:
+
 ```bash
-docker compose -f docker/docker-compose.yml up --build      # boot app + mongo
-docker compose -f docker/docker-compose.yml logs -f app     # tail logs
-docker compose -f docker/docker-compose.yml down            # stop (data persists)
-docker compose -f docker/docker-compose.yml down -v         # stop + wipe DB/uploads
+./docker/bootstrap.sh   # creates docker/.env, generates LCB_SECRETS_COOKIE
+```
+
+Then bring the stack up with the dev override (bind-mount + `node --watch`, so source edits live-reload):
+
+```bash
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up
+```
+
+Without the dev override the code is baked into the image and a `--build` is needed on every change. Use that flavor for prod-ish smoke tests:
+
+```bash
+docker compose -f docker/docker-compose.yml up --build
 ```
 
 App at <http://localhost:8080>. Two named volumes persist state: `mongo-data`, `app-uploads`. See [docker/README.md](docker/README.md) for the full reference.

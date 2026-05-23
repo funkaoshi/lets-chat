@@ -1,0 +1,21 @@
+# Dev override: live-reload via bind mount + `node --watch`.
+# Layer onto the base compose with both -f flags:
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up
+# Or use the bootstrap.sh helper which sets this up for you.
+#
+# - Source bind mount: edits on the host appear inside the container
+#   immediately. `node --watch app.js` restarts the process when any
+#   required file changes (added in Node 20, no extra dep).
+# - Anonymous volume shadows /usr/src/app/node_modules so the Linux-built
+#   modules from `npm ci` (run during image build) win over whatever the
+#   host has -- critical when developing from macOS.
+# - app-uploads named volume is inherited from the base file.
+
+services:
+  app:
+    command: ["node", "--watch", "app.js"]
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ..:/usr/src/app
+      - /usr/src/app/node_modules

@@ -2,21 +2,38 @@
 
 Run Let's Chat + MongoDB with one command. No host installs required.
 
-## Quick start
+## Quick start (dev — live reload)
 
-From the repo root:
+First run only:
+
+```
+./docker/bootstrap.sh
+```
+
+This creates `docker/.env` from the example and generates a random
+`LCB_SECRETS_COOKIE` (the app refuses to boot without one). Idempotent —
+re-running won't overwrite anything you've already filled in.
+
+Then bring the stack up with the dev override layered on:
+
+```
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up
+```
+
+The dev override bind-mounts the repo into the container and starts the
+app under `node --watch`, so client edits show up on browser refresh and
+server edits restart the process automatically. No `--build` needed
+unless you change a dependency.
+
+Open <http://localhost:8080>.
+
+## Quick start (prod-ish)
+
+Without the dev override — code is baked into the image, no live reload:
 
 ```
 docker compose -f docker/docker-compose.yml up --build
 ```
-
-Or from this directory:
-
-```
-cd docker && docker compose up --build
-```
-
-Then open <http://localhost:8080>.
 
 ## What's in this folder
 
@@ -25,17 +42,28 @@ Then open <http://localhost:8080>.
 | `Dockerfile` | Node 20 image; runs `npm ci --legacy-peer-deps` then `npm start` |
 | `Dockerfile.dockerignore` | Excludes host `node_modules`, `.git`, etc. from the build context (BuildKit reads `<dockerfile>.dockerignore` automatically) |
 | `docker-compose.yml` | `app` + `mongo:7` services on a private network |
+| `docker-compose.dev.yml` | Dev override: source bind mount + `node --watch` |
+| `bootstrap.sh` | First-run helper: creates `.env`, generates cookie secret |
 
 ## Common commands
 
+`COMPOSE` shorthand for brevity below:
+
+```
+export COMPOSE="docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml"
+```
+
+(Drop the second `-f` for the prod-ish flavor.)
+
 | Action | Command |
 |--------|---------|
-| Start (detached) | `docker compose -f docker/docker-compose.yml up -d` |
-| Tail app logs | `docker compose -f docker/docker-compose.yml logs -f app` |
-| Stop | `docker compose -f docker/docker-compose.yml down` |
-| Stop + wipe DB & uploads | `docker compose -f docker/docker-compose.yml down -v` |
-| Rebuild after dep changes | `docker compose -f docker/docker-compose.yml build --no-cache app` |
-| Shell into app container | `docker compose -f docker/docker-compose.yml exec app bash` |
+| Start (detached) | `$COMPOSE up -d` |
+| Tail app logs | `$COMPOSE logs -f app` |
+| Stop | `$COMPOSE down` |
+| Stop + wipe DB & uploads | `$COMPOSE down -v` |
+| Rebuild after dep changes | `$COMPOSE build --no-cache app` |
+| Shell into app container | `$COMPOSE exec app bash` |
+| Restart the app process | `$COMPOSE restart app` |
 
 ## Configuration
 
