@@ -66,7 +66,7 @@ app.io.route('account:login', function(req) { req.io.respond({...}); });
 | `app/middlewares/` | Express middleware (requireLogin, etc.) |
 | `app/xmpp/` | XMPP MUC server (optional, disabled by default) |
 | `templates/` | Nunjucks HTML (login.html, chat.html, transcript.html) |
-| `media/js/` | Client-side JavaScript |
+| `media/js/` | Client-side JavaScript (vendor libs committed under `media/js/vendor/` — no Bower/Grunt build step) |
 | `media/less/` | LESS stylesheets → compiled by connect-assets |
 | `locales/` | i18n JSON files (19+ languages) |
 | `extras/` | Emotes (YAML) and text replacements |

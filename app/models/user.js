@@ -10,7 +10,6 @@ var bcrypt = require('bcryptjs'),
     hash = require('node_hash'),
     mongoose = require('mongoose'),
     uniqueValidator = require('mongoose-unique-validator'),
-    validate = require('mongoose-validate'),
     settings = require('./../config');
 
 var ObjectId = mongoose.Schema.Types.ObjectId;
@@ -35,7 +34,7 @@ var UserSchema = new mongoose.Schema({
         trim: true,
         lowercase: true,
         unique: true,
-        validate: [ validate.email, 'invalid email address' ]
+        match: [ /^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'invalid email address' ]
     },
     password: {
         type: String,
