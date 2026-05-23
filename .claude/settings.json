@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/ramanan/Documents/Code/lets-chat && [ -f node_modules/.bin/eslint ] && node_modules/.bin/eslint app/ --quiet 2>&1 | head -30 || true"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -162,7 +162,7 @@ UserSchema.methods.generateToken = function(cb) {
 
             this.token = hash;
 
-            var userToken = new Buffer(
+            var userToken = Buffer.from(
                 this._id.toString() + ':' + password
             ).toString('base64');
 
@@ -178,7 +178,7 @@ UserSchema.statics.findByToken = function(token, cb) {
         return cb(null, null);
     }
 
-    var tokenParts = new Buffer(token, 'base64').toString('ascii').split(':'),
+    var tokenParts = Buffer.from(token, 'base64').toString('ascii').split(':'),
         userId = tokenParts[0],
         hash = tokenParts[1];
 

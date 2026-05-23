@@ -62,7 +62,7 @@ module.exports = function() {
                         fileName.replace('.yml', '') + '/';
 
                     var file = fs.readFileSync(fullpath, 'utf8');
-                    var data = yaml.safeLoad(file);
+                    var data = yaml.load(file);
                     _.each(data, function(emote) {
                         emote.image = imgDir + emote.image;
                         emotes.push(emote);
@@ -77,7 +77,7 @@ module.exports = function() {
             ['default.yml', 'local.yml'].forEach(function(filename) {
                 var fullpath = path.join(process.cwd(), 'extras/replacements/' + filename);
                 if (fs.existsSync(fullpath)) {
-                    replacements = _.merge(replacements, yaml.safeLoad(fs.readFileSync(fullpath, 'utf8')));
+                    replacements = _.merge(replacements, yaml.load(fs.readFileSync(fullpath, 'utf8')));
                 }
             });
             res.json(replacements);

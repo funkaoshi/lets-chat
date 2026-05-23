@@ -1,54 +1,63 @@
-![Let's Chat](http://i.imgur.com/0a3l5VF.png)
+# Let's Chat — Docker
 
-# What is Let's Chat?
+Run Let's Chat + MongoDB with one command. No host installs required.
 
-A self-hosted chat app for small teams.
+## Quick start
 
-![Screenshot](http://i.imgur.com/C4uMD67.png)
-
-# How to use this image
+From the repo root:
 
 ```
-docker run  --name some-letschat --link some-mongo:mongo -d sdelements/lets-chat
+docker compose -f docker/docker-compose.yml up --build
 ```
 
-If you'd like to be able to access the instance from the host without the container's IP, standard port mappings can be used:
+Or from this directory:
 
 ```
-docker run  --name some-letschat --link some-mongo:mongo -p 8080:8080 -d sdelements/lets-chat
+cd docker && docker compose up --build
 ```
 
-Then, access it via `http://localhost:8080` or `http://host-ip:8080` in a browser.
+Then open <http://localhost:8080>.
 
-## ... via `docker-compose`
+## What's in this folder
 
-Example docker-compose.yml for `sdelements/lets-chat`:
+| File | Purpose |
+|------|---------|
+| `Dockerfile` | Node 20 image; runs `npm ci --legacy-peer-deps` then `npm start` |
+| `Dockerfile.dockerignore` | Excludes host `node_modules`, `.git`, etc. from the build context (BuildKit reads `<dockerfile>.dockerignore` automatically) |
+| `docker-compose.yml` | `app` + `mongo:7` services on a private network |
 
-```yml
-app:
-  image: sdelements/lets-chat
-  links:
-    - mongo
-  ports:
-    - 8080:8080
-    - 5222:5222
+## Common commands
 
-mongo:
-  image: mongo:latest
+| Action | Command |
+|--------|---------|
+| Start (detached) | `docker compose -f docker/docker-compose.yml up -d` |
+| Tail app logs | `docker compose -f docker/docker-compose.yml logs -f app` |
+| Stop | `docker compose -f docker/docker-compose.yml down` |
+| Stop + wipe DB & uploads | `docker compose -f docker/docker-compose.yml down -v` |
+| Rebuild after dep changes | `docker compose -f docker/docker-compose.yml build --no-cache app` |
+| Shell into app container | `docker compose -f docker/docker-compose.yml exec app bash` |
+
+## Configuration
+
+The container honours all `LCB_*` environment variables. To override defaults, edit `docker-compose.yml` or mount a `settings.yml`:
+
+```yaml
+    volumes:
+      - app-uploads:/usr/src/app/uploads
+      - ./my-settings.yml:/usr/src/app/config/settings.yml:ro
 ```
 
-Run `docker-compose up`, wait for it to initialize completely, and visit `http://localhost:8080` or `http://host-ip:8080`.
+See the [environment variables wiki](https://github.com/sdelements/lets-chat/wiki/Environment-variables) for the full list.
 
-# Configuration
+## Persistence
 
-You can config your Let's Chat Docker instance using one of the following methods:
+Named volumes:
+- `mongo-data` — MongoDB database files
+- `app-uploads` — user-uploaded files
 
-## Config file
+`docker compose down` keeps data; `docker compose down -v` wipes it.
 
-Create a settings.yml file in a directory and then mount that directory as a Docker volume.
+## Ports
 
-`/usr/src/app/config`
-
-## Environment variables
-
-[See the Let's Chat wiki for a list of envirnoment variables](https://github.com/sdelements/lets-chat/wiki/Environment-variables)
+- Host `8080` → container `8080` (HTTP). macOS reserves `5000` for AirPlay, so the legacy default is avoided.
+- XMPP is disabled by default (`xmpp.enable: false` in `defaults.yml`). To enable it, set `LCB_XMPP_ENABLE=true` and expose port 5222.

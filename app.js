@@ -20,15 +20,14 @@ var _ = require('lodash'),
     http = require('http'),
     nunjucks = require('nunjucks'),
     mongoose = require('mongoose'),
-    connectMongo = require('connect-mongo/es5'),
+    MongoStore = require('connect-mongo'),
     all = require('require-tree'),
     psjon = require('./package.json'),
     settings = require('./app/config'),
     auth = require('./app/auth/index'),
     core = require('./app/core/index');
 
-var MongoStore = connectMongo(express.session),
-    httpEnabled = settings.http && settings.http.enable,
+var httpEnabled = settings.http && settings.http.enable,
     httpsEnabled = settings.https && settings.https.enable,
     models = all(path.resolve('./app/models')),
     middlewares = all(path.resolve('./app/middlewares')),
@@ -55,9 +54,8 @@ if (settings.env === 'production') {
 }
 
 // Session
-var sessionStore = new MongoStore({
-    url: settings.database.uri,
-    autoReconnect: true
+var sessionStore = MongoStore.create({
+    mongoUrl: settings.database.uri
 });
 
 // Session
@@ -79,26 +77,30 @@ app.io.session(session);
 auth.setup(app, session, core);
 
 // Security protections
-app.use(helmet.frameguard());
-app.use(helmet.hidePoweredBy());
-app.use(helmet.ieNoOpen());
-app.use(helmet.noSniff());
-app.use(helmet.xssFilter());
-app.use(helmet.hsts({
-    maxAge: 31536000,
-    includeSubdomains: true,
-    force: httpsEnabled,
-    preload: true
-}));
-app.use(helmet.contentSecurityPolicy({
-    defaultSrc: ['\'none\''],
-    connectSrc: ['*'],
-    scriptSrc: ['\'self\'', '\'unsafe-eval\''],
-    styleSrc: ['\'self\'', 'fonts.googleapis.com', '\'unsafe-inline\''],
-    fontSrc: ['\'self\'', 'fonts.gstatic.com'],
-    mediaSrc: ['\'self\''],
-    objectSrc: ['\'self\''],
-    imgSrc: ['* data:']
+app.use(helmet({
+    frameguard: { action: 'sameorigin' },
+    hidePoweredBy: true,
+    ieNoOpen: true,
+    noSniff: true,
+    xssFilter: true,
+    hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+        force: httpsEnabled
+    },
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ['\'none\''],
+            connectSrc: ['*'],
+            scriptSrc: ['\'self\'', '\'unsafe-eval\''],
+            styleSrc: ['\'self\'', 'fonts.googleapis.com', '\'unsafe-inline\''],
+            fontSrc: ['\'self\'', 'fonts.gstatic.com'],
+            mediaSrc: ['\'self\''],
+            objectSrc: ['\'self\''],
+            imgSrc: ['*', 'data:']
+        }
+    }
 }));
 
 var bundles = {};
@@ -260,11 +262,11 @@ function checkForMongoTextSearch() {
     });
 }
 
-mongoose.connect(settings.database.uri, function(err) {
-    if (err) {
+mongoose.connect(settings.database.uri)
+    .then(function() {
+        checkForMongoTextSearch();
+        startApp();
+    })
+    .catch(function(err) {
         throw err;
-    }
-
-    checkForMongoTextSearch();
-    startApp();
-});
+    });

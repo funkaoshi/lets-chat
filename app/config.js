@@ -30,17 +30,17 @@ var pipeline = [
 
     function getDefaultSettings(context) {
         var file = fs.readFileSync('defaults.yml', 'utf8');
-        context.defaults = yaml.safeLoad(file);
+        context.defaults = yaml.load(file);
     },
 
     function getFileSettings(context) {
         var file;
         if (fs.existsSync('config/settings.yml')) {
             file = fs.readFileSync('config/settings.yml', 'utf8');
-            context.file = yaml.safeLoad(file) || {};
+            context.file = yaml.load(file) || {};
         } else if (fs.existsSync('settings.yml')) {
             file = fs.readFileSync('settings.yml', 'utf8');
-            context.file = yaml.safeLoad(file) || {};
+            context.file = yaml.load(file) || {};
         } else {
             context.file = {};
         }
