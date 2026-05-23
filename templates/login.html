@@ -27,13 +27,13 @@
                 </div>
                 <div class="lcb-login-box-bottom">
                     <% if auth.local.enableRegistration %>
-                        <div class="links pull-left">
+                        <div class="links float-start">
                             <a href="#" class="lcb-show-box" data-target=".lcb-login-box-registration">
                                 <$ __('I need an account') $>
                             </a>
                         </div>
                     <% endif %>
-                    <button class="btn-info btn btn-lg pull-right" type="submit">
+                    <button class="btn-info btn btn-lg float-end" type="submit">
                         <$ __('Sign in') $>
                         <i class="fa fa-sign-in"></i>
                     </button>
@@ -44,7 +44,7 @@
                     <h2 class="lcb-login-box-heading"><$ __('Register') $></h2>
                     <div class="form-group">
                         <div class="input-group">
-                            <span class="input-group-addon">@</span>
+                            <span class="input-group-text">@</span>
                             <input type="text" name="username"
                                 class="required form-control"
                                 placeholder="<$ __('Username') $>" maxlength="48" >
@@ -75,12 +75,12 @@
                         </div>
                     </div>
                     <div class="lcb-login-box-bottom">
-                        <div class="links pull-left">
+                        <div class="links float-start">
                             <a href="#" class="lcb-show-box" data-target=".lcb-login-box-login">
                                 <$ __('I already have an account') $>
                             </a>
                         </div>
-                        <button class="btn-info btn btn-lg pull-right" type="submit">
+                        <button class="btn-info btn btn-lg float-end" type="submit">
                             <$ __('Register') $>
                         </button>
                     </div>

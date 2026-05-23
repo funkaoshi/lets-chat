@@ -15,24 +15,24 @@
             <div class="lcb-room-header-actions">
                 <div class="btn-group">
                     {{#if iCanEdit}}
-                        <a class="btn btn-action hidden-xs show-edit-room"
+                        <a class="btn btn-action d-none d-sm-inline-block show-edit-room"
                             title="<$ __('Edit Room') $>" aria-label="<$ __('Edit Room') $>">
                             <i class="fa fa-edit"></i>
                         </a>
                     {{/if}}
-                    <a class="btn btn-action hidden-xs" title="<$ __('Chat History') $>" aria-label="<$ __('Chat History') $>"
+                    <a class="btn btn-action d-none d-sm-inline-block" title="<$ __('Chat History') $>" aria-label="<$ __('Chat History') $>"
                         href="./transcript?room={{ id }}" target="_blank">
                         <i class="fa fa-history"></i>
                     </a>
                 </div>
                 <div class="btn-group">
                     <% if settings.files.enable %>
-                        <a class="btn btn-action hidden-xs lcb-upload-trigger" title="<$ __('Upload Files') $>" aria-label="<$ __('Upload Files') $>" href="#">
+                        <a class="btn btn-action d-none d-sm-inline-block lcb-upload-trigger" title="<$ __('Upload Files') $>" aria-label="<$ __('Upload Files') $>" href="#">
                             <i class="fa fa-upload"></i>
                         </a>
                     <% endif %>
                     <% if settings.giphy.enable %>
-                        <a class="btn btn-action hidden-xs lcb-giphy" href="#lcb-giphy" title="<$ __('Giphy') $>" aria-label="<$ __('Giphy') $>" data-toggle="modal">
+                        <a class="btn btn-action d-none d-sm-inline-block lcb-giphy" href="#lcb-giphy" title="<$ __('Giphy') $>" aria-label="<$ __('Giphy') $>" data-bs-toggle="modal">
                             <i class="fa fa-gift"></i>
                         </a>
                     <% endif %>
@@ -79,47 +79,47 @@
         <div class="edit-room modal fade lcb-room-edit">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form action="" class="validate form-horizontal" method="post">
+                <form action="" class="validate" method="post">
                     <div class="modal-header">
-                        <button class="close hide-edit-room" type="button">&times;</button>
                         <h4 class="modal-title"><$ __('Edit Room') $></h4>
+                        <button class="btn-close hide-edit-room" type="button" aria-label="<$ __('Close') $>"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="form-group">
-                            <label class="control-label col-sm-6"><$ __('Name') $></label>
+                        <div class="form-group row">
+                            <label class="col-form-label col-sm-6"><$ __('Name') $></label>
                             <div class="col-sm-11">
                                 <input class="required name form-control" name=
                                 "name" type="text" value="{{name}}">
                             </div>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group row">
                             <label class=
-                            "control-label col-sm-6"><$ __('Description') $></label>
+                            "col-form-label col-sm-6"><$ __('Description') $></label>
                             <div class="col-sm-11">
                                 <textarea class="form-control" name=
                                 "description" rows="5">{{description}}</textarea>
                             </div>
                         </div>
                         {{#if private}}
-                            <div class="form-group">
+                            <div class="form-group row">
                                 <label class=
-                                "control-label col-sm-6"><$ __('Password') $></label>
+                                "col-form-label col-sm-6"><$ __('Password') $></label>
                                 <div class="col-sm-11">
                                     <input class="form-control" name=
                                     "password" type="password" value="{{password}}">
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group row">
                                 <label class=
-                                "control-label col-sm-6"><$ __('Confirm Password') $></label>
+                                "col-form-label col-sm-6"><$ __('Confirm Password') $></label>
                                 <div class="col-sm-11">
                                     <input class="form-control" name=
                                     "confirmPassword" type="password" value="{{password}}">
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group row">
                                 <label class=
-                                "control-label col-sm-6"><$ __('Participants') $></label>
+                                "col-form-label col-sm-6"><$ __('Participants') $></label>
                                 <div class="col-sm-11">
                                     <textarea class="form-control lcb-entry-participants" name=
                                     "participants">{{participants}}</textarea>
@@ -129,15 +129,15 @@
                         <p class="response" style="display: none;"></p>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-info pull-right submit-edit-room" type=
-                        "submit">
-                            <i class="icon-ok"></i> <$ __('Save') $>
-                        </button>
-                        <a class="archive-room btn btn-danger pull-left"
+                        <a class="archive-room btn btn-danger float-start"
                         tabindex="-1">
                             <i class="icon-remove icon-white"></i>
                             <$ __('Archive Room') $>
                         </a>
+                        <button class="btn btn-info float-end submit-edit-room" type=
+                        "submit">
+                            <i class="icon-ok"></i> <$ __('Save') $>
+                        </button>
                     </div>
                 </form>
             </div>

@@ -7,6 +7,7 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
+| _pending_ | Bootstrap 3 → 5 (prebuilt CSS + modal shim, ~8k LOC of vendored LESS gone) |
 | `be515ee` | Docker dev flow: bind-mount + `node --watch` override, bootstrap.sh first-run helper |
 | `f9c263c` | Phase 1: drop XMPP, Multer 2, ESLint 9 flat config, GH Actions CI, fail-fast on default cookie secret |
 | `2bde695` | Expand .env.example: cookie secret, db URI, plugin creds |
@@ -37,6 +38,61 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
   to empty in [defaults.yml](defaults.yml) with a guidance comment;
   [docker/.env.example](docker/.env.example) updated to flag it as
   required.
+
+### Bootstrap 3 → 5
+
+The big visible-but-mechanical refactor. Done as a single pass across
+~12 templates + the LESS pipeline.
+
+- **Pipeline.** `bootstrap` bumped 3.4.1 → 5.3.3; `@popperjs/core` added.
+  The vendored BS3 LESS tree (42 files under
+  `media/less/vendor/bootstrap/`) is gone. [media/less/vendor.less](media/less/vendor.less)
+  now `@import (inline)`'s the prebuilt
+  `node_modules/bootstrap/dist/css/bootstrap.css` instead of compiling
+  from source. Selectize integration swapped from `bootstrap3` →
+  `bootstrap5`. The vendor bundle still compiles via connect-assets LESS
+  — no SCSS transformer added.
+- **Design tokens.** New [media/less/lcb-tokens.less](media/less/lcb-tokens.less)
+  loads first, overriding BS5's `:root` CSS custom properties (`--bs-primary`,
+  `--bs-columns: 18` to preserve the custom 18-col grid, brand color
+  palette). Same file also defines a few legacy LESS variables
+  (`@screen-xs-max`, `@brand-*`) and small mixin shims
+  (`.text-overflow`, `.size`, `.square`, `.progress-bar-variant`) that
+  the existing `media/less/style/**` still references.
+- **Modal JS shim.** BS5 dropped jQuery plugin support, but 14
+  `$el.modal('show'/'hide')` call sites across the Backbone views still
+  rely on it. New [media/js/legacy/bootstrap-modal-shim.js](media/js/legacy/bootstrap-modal-shim.js)
+  (~30 lines) re-attaches `$.fn.modal` and delegates to BS5's vanilla
+  `bootstrap.Modal.getOrCreateInstance(...)`. Mirrors the
+  sweetalert-shim pattern already accepted. The shim file goes away
+  when jQuery/Backbone do.
+- **Template sweep.** Across all 12 templates + 8 Handlebars partials:
+  `data-toggle`/`data-dismiss`/`data-target` → `data-bs-*`;
+  `btn-default` → `btn-secondary`; `pull-left`/`pull-right` →
+  `float-start`/`float-end`; `hidden-xs` → `d-none d-sm-inline-block`
+  (preserving intent); `input-group-addon` span → `input-group-text`
+  (BS5 dropped the wrapping div); `class="close" &times;` →
+  `<button class="btn-close">`; `form-horizontal` removed (5 templates)
+  with each row rebuilt as `.row + .col-form-label + .col-*`;
+  `col-sm-offset-2` → `offset-sm-2`; checkbox/radio markup
+  reworked to BS5's `.form-check`/`.form-check-input`/`.form-check-label`;
+  `dropdown-menu-right` → `dropdown-menu-end`; `li class="divider"` →
+  `<li><hr class="dropdown-divider"></li>`; dropdown items gained
+  `.dropdown-item`.
+- **Daterangepicker.** Stale `./media/js/vendor/...-bs3.css` link in
+  [transcript.html](templates/transcript.html) (broken since the
+  vendor dir was dropped a few commits ago) repointed at the
+  node_modules copy via connect-assets's `/media/dist/` mount.
+- **Loaded JS.** [media/js/vendor.js](media/js/vendor.js) now requires
+  `bootstrap.bundle.js` (includes Popper) and the modal shim, in that
+  order.
+
+Net diff: ~8000 LOC removed (vendored BS3 LESS), ~130 LOC added.
+
+Programmatic verification: `npm test` clean; vendor.css compiles with
+BS5 selectors present; all asset URLs return 200; templates contain
+zero BS3-removed class names. Browser-side smoke pass still on the
+maintainer to walk — see the verification baseline at the bottom.
 
 ### Docker dev flow
 
@@ -154,7 +210,6 @@ Rough priority order. Sizes are S/M/L/XL where XL is multi-day.
 
 | Item | Size | Notes |
 |------|:----:|-------|
-| Bootstrap 3 → 5 | L | Class renames (`btn-default` → `btn-secondary`, `panel` → `card`, glyphicons gone) across every file in `templates/`. Visible-but-large refactor. Worth its own plan. |
 | express.oi → Express 5 + native Socket.IO 4 | XL | ~30-40 controller handlers use `req.io.route()` / `req.io.respond()`. Multi-day rewrite. Unlocks every other server-side modernization including the Socket.IO upgrade and lifting most residual CVEs. |
 | moment → dayjs/Luxon | M | moment is maintenance-mode. Surface area used is small. |
 | Actual tests | XL | No test suite exists. Pre-commit hook runs ESLint only. |

@@ -6,7 +6,7 @@ For the ongoing modernization status (shipped work, open items, known footguns),
 
 Self-hosted real-time team chat. Node.js + Express + Socket.IO + MongoDB. Users, rooms, messages, file uploads, @mentions.
 
-Stack: **express.oi** (Express 4 + Socket.IO 1.x wrapper) · **Mongoose** · **Nunjucks** templates · **Passport** auth · **connect-assets** for LESS/JS bundling.
+Stack: **express.oi** (Express 4 + Socket.IO 1.x wrapper) · **Mongoose** · **Nunjucks** templates · **Passport** auth · **connect-assets** for LESS/JS bundling · **Bootstrap 5** (prebuilt CSS + small jQuery modal shim in `media/js/legacy/bootstrap-modal-shim.js`).
 
 ## Running Locally
 

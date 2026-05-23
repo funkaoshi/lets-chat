@@ -1,10 +1,10 @@
-<div id="lcb-add-room" class="modal fade" data-backdrop=false>
+<div id="lcb-add-room" class="modal fade" data-bs-backdrop="false">
     <div class="modal-dialog">
         <div class="modal-content">
             <form role="form" action="#!/rooms/add" class="lcb-rooms-add">
                 <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                     <h4 class="modal-title"><$ __('Add Room') $></h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<$ __('Close') $>"></button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
@@ -16,7 +16,7 @@
                     <div class="form-group">
                         <label><$ __('Slug') $></label>
                         <div class="input-group">
-                            <span class="input-group-addon">#</span>
+                            <span class="input-group-text">#</span>
                             <input type="text" placeholder="<$ __('Slug') $>"
                                 class="lcb-room-slug form-control" >
                         </div>
@@ -27,9 +27,9 @@
                             class="lcb-room-description form-control">
                     </div>
                     <% if settings.rooms.private %>
-                        <div class="checkbox">
-                            <label>
-                                <input type="checkbox" class="lcb-room-private" />
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input lcb-room-private" id="lcb-room-private-check" />
+                            <label class="form-check-label" for="lcb-room-private-check">
                                 <$ __('Private?') $>
                             </label>
                         </div>
@@ -49,7 +49,7 @@
                     <% endif %>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal"><$ __('Cancel') $></button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><$ __('Cancel') $></button>
                     <button type="submit" class="btn btn-primary"><$ __('Save') $></button>
                 </div>
             </form>

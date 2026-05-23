@@ -1,5 +1,5 @@
 /*********************
-* LCB Styles
+* LCB Styles — vendor bundle
 *********************/
 
 @font-face {
@@ -9,11 +9,20 @@
     src: local('Pacifico Regular'), local('Pacifico-Regular'), url('../font/pacifico.woff') format('woff');
 }
 
-@import 'vendor/bootstrap/bootstrap.less';
+/* LCB design tokens — must come before bootstrap.css so :root overrides win. */
+@import 'lcb-tokens.less';
+
+/* Bootstrap 5 prebuilt CSS (no LESS source). Bumped from BS3.x. */
+@import (inline) '../../node_modules/bootstrap/dist/css/bootstrap.css';
+
+/* Font Awesome — still using the vendored LESS source. */
 @import 'vendor/font-awesome/font-awesome.less';
+
+/* hat.less provides .translate3d etc. that onoffswitch.less depends on. */
+@import 'vendor/hat.less';
 @import 'vendor/onoffswitch.less';
 
 @import (inline) '../js/legacy/jvfloat.css';
 @import (inline) '../js/legacy/jquery.atwho.css';
 @import (inline) '../../node_modules/@selectize/selectize/dist/css/selectize.css';
-@import (inline) '../../node_modules/@selectize/selectize/dist/css/selectize.bootstrap3.css';
+@import (inline) '../../node_modules/@selectize/selectize/dist/css/selectize.bootstrap5.css';

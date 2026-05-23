@@ -2,28 +2,28 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <form action="./account/settings" method="post"
-                class="validate form-horizontal">
+                class="validate">
                 <div class="modal-header">
-                    <button type="button" class="close"
-                        data-dismiss="modal" aria-hidden="true">&times;</button>
                     <h4 class="modal-title">
                         <i class="icon-cogs"></i> <$ __('Account Settings') $>
                     </h4>
+                    <button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="<$ __('Close') $>"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label class="control-label col-sm-6"><$ __('Username') $></label>
+                    <div class="form-group row">
+                        <label class="col-form-label col-sm-6"><$ __('Username') $></label>
                         <div class="col-sm-11">
                             <div class="input-group">
-                                <span class="input-group-addon">@</span>
+                                <span class="input-group-text">@</span>
                                 <input type="text" name="username" required
                                     class="lcb-room-slug form-control"
                                     value="<$ account.username $>" >
                             </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="control-label col-sm-6"><$ __('Email') $></label>
+                    <div class="form-group row">
+                        <label class="col-form-label col-sm-6"><$ __('Email') $></label>
                         <div class="col-sm-11">
                             <input type="text" name="email" required
                                 class="required email form-control"
@@ -31,8 +31,8 @@
                         </div>
                     </div>
                     <% if account.local %>
-                        <div class="form-group">
-                            <label class="control-label col-sm-6">
+                        <div class="form-group row">
+                            <label class="col-form-label col-sm-6">
                                 <$ __('New Password') $>
                             </label>
                             <div class="col-sm-11">
@@ -42,8 +42,8 @@
                                     data-clear="true" />
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="control-label col-sm-6">
+                        <div class="form-group row">
+                            <label class="col-form-label col-sm-6">
                                 <$ __('Confirm New Password') $>
                             </label>
                             <div class="col-sm-11">
@@ -53,8 +53,8 @@
                             </div>
                         </div>
                     <% endif %>
-                    <div class="form-group">
-                        <label class="control-label col-sm-6">
+                    <div class="form-group row">
+                        <label class="col-form-label col-sm-6">
                             <$ __('Current Password') $> <small><$ __('Required') $></small>
                         </label>
                         <div class="col-sm-11">

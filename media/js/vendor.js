@@ -7,7 +7,8 @@
 //= require backbone/backbone.js
 //= require moment/moment.js
 //= require handlebars/dist/handlebars.js
-//= require bootstrap/dist/js/bootstrap.js
+//= require bootstrap/dist/js/bootstrap.bundle.js
+//= require legacy/bootstrap-modal-shim.js
 //= require store2/dist/store2.js
 //= require legacy/jvfloat.js
 //= require dropzone/dist/dropzone.js
