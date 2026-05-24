@@ -45,26 +45,35 @@ Key defaults: `database.uri = mongodb://localhost/letschat`, `http.port = 5000` 
 ### Entry point: `app.js`
 
 Setup order matters:
-1. Express.oi init (HTTP or HTTPS server with Socket.IO)
-2. Session (connect-mongo store)
-3. Auth (Passport + passport.socketio)
-4. Security middleware (Helmet)
-5. Asset pipeline (connect-assets: LESS + JS bundles)
-6. Templates (Nunjucks with custom delimiters: `<% %>`, `<$ $>`, `<# #>`)
-7. i18n
-8. Controllers registered (each controller calls `app.get/post/io.route`)
-9. Mongoose connect → `startApp()` (listen)
+1. Cookie-secret guard (refuse to boot on default `"secretsauce"`)
+2. Express app + HTTP server + Socket.IO 4 (via `app/express-oi-compat.js`)
+3. `express-session` middleware (connect-mongo store), installed on both HTTP (`app.use`) and Socket.IO (`io.engine.use`) via `app.io.session()`
+4. Auth (`app/auth/index.js`): Passport HTTP middleware + custom Socket.IO middleware that pulls `session.passport.user` and deserializes
+5. Security middleware (Helmet)
+6. Asset pipeline (connect-assets: LESS + JS bundles)
+7. Templates (Nunjucks with custom delimiters: `<% %>`, `<$ $>`, `<# #>`)
+8. i18n
+9. Controllers registered (each controller calls `app.get/post/io.route`)
+10. Mongoose connect → `startApp()` (listen)
 
-### express.oi pattern
+### Dual-dispatch (HTTP ⇄ Socket.IO) pattern
 
-Controllers use `req.io.route()` to dispatch to socket handlers:
+The compat layer in `app/express-oi-compat.js` lets one handler serve both protocols. HTTP routes typically just delegate:
 
 ```js
-// HTTP route → dispatches to socket handler
+// HTTP route → dispatches to the io.route handler
 app.post('/account/login', function(req) { req.io.route('account:login'); });
 
-// Socket.IO handler
-app.io.route('account:login', function(req) { req.io.respond({...}); });
+// Socket.IO handler — same code runs whether the request came in via
+// HTTP POST or a socket emit. Uses standard Express res.* methods;
+// the compat layer maps res.json/status/sendStatus to socket acks
+// when the request originated from Socket.IO.
+app.io.route('account', {
+    login: function(req, res) {
+        // ... auth.authenticate ...
+        res.json({ status: 'success' });
+    }
+});
 ```
 
 ### Key directories
@@ -96,12 +105,28 @@ Reads `defaults.yml` → `settings.yml` → env vars → merges. Exports the res
 
 ### Auth
 
-Multiple providers can be active simultaneously. Bearer token and HTTP Basic auth supported for API access. `passport.socketio` shares sessions between HTTP and Socket.IO.
+Multiple providers can be active simultaneously (local, LDAP, Kerberos). Bearer token and HTTP Basic auth supported for API access. Session sharing between HTTP and Socket.IO runs through a small custom middleware in `app/auth/index.js` — reads `socket.request.session.passport.user` (populated by `io.engine.use(sessionMiddleware)` in the compat layer) and runs the regular `passport.deserializeUser` to attach `socket.request.user`.
 
 ## Package Notes
 
 - **`app/express-oi-compat.js`** — in-tree replacement for the unmaintained `express.oi` npm package. Reimplements the dual-dispatch trick (one handler serves both HTTP and Socket.IO) on top of native Express 5 + Socket.IO 4. Touching it can break any controller that uses `app.io.route()` or `req.io.route()`.
 - **`connect-assets` 5.3.0** — pinned. Bundles LESS and JS. Depends on `less` being present. Last remaining 2014-era pinned dep; the residual CVE chain comes from its transitives.
+
+## Migration patterns used here
+
+When upgrading a major dep with many call sites, this codebase consistently picks a **compat-shim** approach over a "rewrite all the callers" pass. Three concrete examples in the tree:
+
+- **`media/js/legacy/sweetalert-shim.js`** — maps the legacy `swal('title','text','type')` and `swal({...}, cb)` signatures onto sweetalert2's Promise API. Let us bump v1 → v2 without touching 22 call sites.
+- **`media/js/legacy/bootstrap-modal-shim.js`** — re-attaches `$.fn.modal('show'/'hide')` (jQuery plugin API, dropped in BS5) onto `bootstrap.Modal.getOrCreateInstance(...)`. Let us bump BS3 → 5 without touching 14 Backbone views.
+- **`app/express-oi-compat.js`** — in-tree reimplementation of the unmaintained `express.oi` package on top of native Express 5 + Socket.IO 4. Preserves `app.io.route()` / `req.io.route()` dual-dispatch + `req.param()` so 12 controllers stayed unchanged.
+
+**The decision rule:** if a migration would touch more than ~10 call sites, ask "would a 30-line shim let me upgrade the lib *without* touching the callers?" If yes, prefer it — even at the cost of carrying a small piece of glue forever. A later, narrower project can drop the shim when the underlying call-site pattern is itself being replaced (e.g., the shim files all disappear together when jQuery/Backbone go).
+
+## Things that bit us — worth knowing
+
+- **`docker compose up --build -d` can silently drop bind mounts** from the dev override file. After a rebuild, run `down` then `up -d --force-recreate` (with both `-f` files) to ensure overrides re-apply. Symptom: edits to host files don't reach the container, `node --watch` never restarts.
+- **Always do a real browser smoke after server-side changes.** Programmatic socket clients can mask issues that real clients hit: Socket.IO 4 ack ordering races, Backbone delegated-event bubbling through stacking contexts, modal backdrop layering. The Express 5 / Socket.IO 4 migration passed curl + scripted-socket smoke cleanly and then surfaced two bugs in the browser within 30 seconds.
+- **Socket.IO 4 doesn't auto-stringify room names** — pass `String(room._id)` to `socket.join()` and `io.to()` consistently, or Set membership won't match.
 
 ## ESLint
 
