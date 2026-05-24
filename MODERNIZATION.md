@@ -7,6 +7,7 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
+| _pending_ | Giphy API key out of the rendered DOM (server-side proxy) |
 | `9643d67` | Guard against undefined `openRooms` in client `joinRoom`/`leaveRoom` |
 | `c68ab19` | Stringify room IDs for Socket.IO 4 room targeting |
 | `d75ec67` | express.oi → Express 5 + Socket.IO 4 via in-tree compat layer; passport.socketio replaced |
@@ -311,11 +312,38 @@ Four issues surfaced once the page actually rendered in a browser:
 Residual 19 are transitive deps of `connect-assets` 5.x (still pinned;
 the only remaining piece of the original 2014-era stack).
 
-## Known footguns
+### Giphy key proxied server-side
 
-- **Giphy API key is rendered into the DOM** as `data-apikey` on every chat
-  page. Fine for a team-only deployment, sketchy for anything public. A
-  "move secret out of client HTML" cleanup is in the open list below.
+Small but the only item flagged as a "known footgun" in the previous
+revision of this doc. The Giphy `apiKey`, `rating`, and `limit` used to
+be rendered into the chat page as `data-*` attributes on the `#lcb-giphy`
+modal so the client could call `api.giphy.com/v1/gifs/search` directly.
+Anyone viewing source could grab the key.
+
+- New [app/controllers/giphy.js](app/controllers/giphy.js): one
+  `GET /extras/giphy/search?q=...` route behind `requireLogin`. Reads
+  apiKey/rating/limit from `settings.giphy` server-side, calls the
+  upstream Giphy API via Node 20's global `fetch`, returns the trimmed
+  array of `images.fixed_width.url` strings the client actually consumes.
+- [templates/includes/modals/giphy.html](templates/includes/modals/giphy.html):
+  dropped `data-apikey`/`data-rating`/`data-limit` from the modal element.
+- [media/js/views/modals.js](media/js/views/modals.js): `GiphyModalView.loadGifs`
+  now does `$.get('./extras/giphy/search', { q })` and consumes the array
+  directly (server already filters/maps).
+
+Verification: registered + logged in a throwaway user, hit the proxy
+endpoint, got the expected URL array; chat page source contains zero
+occurrences of `apikey`. Giphy modal interaction itself walked by the
+maintainer.
+
+#### Node `--watch` gotcha
+
+`node --watch` only restarts on changes to files already in the require
+graph at startup. Adding a brand-new controller file doesn't trigger a
+restart — confirmed by hitting the new endpoint and getting a real
+Express 404, then a `docker compose restart app` and getting the
+expected 401 from `requireLogin`. Worth knowing when adding net-new
+files to the dev stack.
 
 ## Open / deferred
 
@@ -323,10 +351,10 @@ Rough priority order. Sizes are S/M/L/XL where XL is multi-day.
 
 | Item | Size | Notes |
 |------|:----:|-------|
+| Replace `connect-assets` | M/L | Last 2014-era pinned dep; source of all residual CVEs. Touches every asset URL. |
 | moment → dayjs/Luxon | M | moment is maintenance-mode. Surface area used is small. |
 | Actual tests | XL | No test suite exists. Pre-commit hook runs ESLint only. |
 | Drop jQuery / Backbone (UI rewrite) | XL | 341 jQuery refs, 9 Backbone views. Far-future project. |
-| Move Giphy key out of client HTML | S | Proxy through server, hide key. Quick once you decide on the API shape. |
 
 ## Verification baseline
 

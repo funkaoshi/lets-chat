@@ -226,21 +226,10 @@
             var that = this;
             var search = this.$el.find('.search-giphy').val();
 
-            $.get('https://api.giphy.com/v1/gifs/search', {
-                q: search,
-                rating: this.$el.data('rating'),
-                limit: this.$el.data('limit'),
-                api_key: this.$el.data('apikey')
-            })
-            .done(function(result) {
-                var images = result.data.filter(function(entry) {
-                    return entry.images.fixed_width.url;
-                }).map(function(entry) {
-                    return entry.images.fixed_width.url;
+            $.get('./extras/giphy/search', { q: search })
+                .done(function(images) {
+                    that.appendGifs(images);
                 });
-
-                that.appendGifs(images);
-            });
         }, 400),
         appendGifs: function(images) {
             var eles = images.map(function(url) {
