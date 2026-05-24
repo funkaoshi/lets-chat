@@ -19,7 +19,7 @@ module.exports = function() {
                 user = user.toJSON();
                 user.room = data.roomId;
                 if (data.roomHasPassword) {
-                    app.io.to(data.roomId).emit('users:join', user);
+                    app.io.to(String(data.roomId)).emit('users:join', user);
                 } else {
                     app.io.emit('users:join', user);
                 }
@@ -33,7 +33,7 @@ module.exports = function() {
                 user = user.toJSON();
                 user.room = data.roomId;
                 if (data.roomHasPassword) {
-                    app.io.to(data.roomId).emit('users:leave', user);
+                    app.io.to(String(data.roomId)).emit('users:leave', user);
                 } else {
                     app.io.emit('users:leave', user);
                 }
@@ -270,7 +270,11 @@ module.exports = function() {
                 user.room = room._id;
 
                 core.presence.join(req.socket.lcbConn, room);
-                req.socket.join(room._id);
+                // Stringify the ObjectId: Socket.IO 1.x coerced room names to
+                // strings on join, but 4.x stores them as-is in a Set, so
+                // io.to(room.id) (string) wouldn't match a socket that joined
+                // with room._id (ObjectId object).
+                req.socket.join(String(room._id));
                 res.json(room.toJSON(req.user));
             });
         },

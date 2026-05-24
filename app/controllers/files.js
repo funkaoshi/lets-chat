@@ -23,7 +23,7 @@ module.exports = function() {
         fil.owner = user;
         fil.room = room.toJSON(user);
 
-        app.io.to(room._id)
+        app.io.to(String(room._id))
               .emit('files:new', fil);
     });
 
