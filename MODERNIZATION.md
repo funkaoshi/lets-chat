@@ -7,6 +7,7 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
+| _pending_ | express.oi → Express 5 + Socket.IO 4 via in-tree compat layer; passport.socketio replaced |
 | `64f29db` | BS5 visual fixes: 18-col grid override, `:root` token cascade, `.hide` shim, modal stacking-context |
 | `c62dee1` | Bootstrap 3 → 5 (prebuilt CSS + modal shim, ~8k LOC of vendored LESS gone) |
 | `be515ee` | Docker dev flow: bind-mount + `node --watch` override, bootstrap.sh first-run helper |
@@ -16,6 +17,53 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 | `5105618` | Move client libs from vendor/ to npm, modernize versions |
 | `dd86552` | Cull build-time CVE chain: remove Grunt/Bower + mongoose-validate |
 | `2a78a87` | Modernize Let's Chat to run on Node 20 + MongoDB 7 in Docker |
+
+### express.oi → Express 5 + Socket.IO 4
+
+The biggest server-side unlock, done via an in-tree compat layer rather
+than a controller-by-controller rewrite. Same trade-off pattern as the
+sweetalert / bootstrap-modal shims.
+
+- **In-tree replacement for `express.oi`.** New
+  [app/express-oi-compat.js](app/express-oi-compat.js) (~150 lines)
+  reimplements the dual-dispatch trick on top of native Express 5 +
+  Socket.IO 4. Exposes the same surface (`app.io.route(name, handler)`,
+  `app.io.session(mw)`, `req.io.route(name)`, `req.param()`,
+  `req.body || req.data` straddling) that the 12 controllers and 8
+  io.route blocks rely on -- zero controller code changed.
+- **Auth bridge rewritten.** `passport.socketio` (last release 2017,
+  incompatible with Socket.IO 4) is gone. New in
+  [app/auth/index.js](app/auth/index.js): a Socket.IO middleware that
+  reads `socket.request.session.passport.user` (populated by
+  `io.engine.use(sessionMiddleware)` in the compat layer) and runs the
+  existing `passport.deserializeUser` to attach `socket.request.user`.
+  Bearer-token path (?token=...) preserved.
+- **Express 4 → 5** (`^5.1.0`) and **Socket.IO 1 → 4** (`^4.7.5`) bumps.
+  Client-side `socket.io-client` bumped 1.7.4 → ^4.7.5 to match.
+- **Socket.IO 4 breaking-change fix.** `socket.conn` was a writable
+  property in Socket.IO 1.x; the project hung its presence-tracking
+  Connection object off it. In 4.x it's a read-only getter returning
+  the engine.io Client. Renamed to `socket.lcbConn` in
+  [app/controllers/presence.js](app/controllers/presence.js) and the
+  two read sites in [app/controllers/rooms.js](app/controllers/rooms.js).
+- **Socket.IO 4 client breaking-change fix.** The `reconnect` lifecycle
+  event moved off the socket onto the Manager (`socket.io.on('reconnect',
+  ...)`); fixed in [media/js/client.js](media/js/client.js).
+- **`req.param()` deprecation.** Express 5 removed `req.param()`; the
+  compat layer reinstates it on both HTTP and socket-routed requests,
+  so the ~30 call sites in controllers (`req.param('room')` etc.) keep
+  working unchanged.
+- **`extras` controller require fix.** Changed `require('express.oi')`
+  to `require('express')` for the `express.static` it pulled in.
+
+CVE delta: 34 → **19** total (3 crit → 3, 14 high → 7, 13 mod → 9,
+3 low → 0). 15 vulns lifted, mostly the `express` 4 and `socket.io` 1
+transitive chains.
+
+Verification: HTTP register/login/whoami via curl, then Socket.IO
+handshake from inside the container with the session cookie + emit
+`account:whoami`, `rooms:list`, `extras:emotes:list` — all return
+correct payloads. Backbone-side `npm test` clean.
 
 ### Phase 1 cleanup (this batch)
 
@@ -231,10 +279,11 @@ Four issues surfaced once the page actually rendered in a browser:
 |------|------:|---------:|-----:|----:|----:|
 | Start (after Node 20 bump) | 78 | 19 | 34 | 21 | 4 |
 | After build-time cull | 33 | 4 | 14 | 12 | 3 |
-| Current (post vendor migration + sweetalert2) | 34 | 4 | 14 | 13 | 3 |
+| After vendor migration + sweetalert2 | 34 | 4 | 14 | 13 | 3 |
+| Current (post express.oi → Express 5) | 19 | 3 | 7 | 9 | 0 |
 
-Residual 34 are all transitive deps of pinned legacy packages
-(`express.oi`, `passport.socketio`, `connect-assets`).
+Residual 19 are transitive deps of `connect-assets` 5.x (still pinned;
+the only remaining piece of the original 2014-era stack).
 
 ## Known footguns
 
@@ -248,7 +297,6 @@ Rough priority order. Sizes are S/M/L/XL where XL is multi-day.
 
 | Item | Size | Notes |
 |------|:----:|-------|
-| express.oi → Express 5 + native Socket.IO 4 | XL | ~30-40 controller handlers use `req.io.route()` / `req.io.respond()`. Multi-day rewrite. Unlocks every other server-side modernization including the Socket.IO upgrade and lifting most residual CVEs. |
 | moment → dayjs/Luxon | M | moment is maintenance-mode. Surface area used is small. |
 | Actual tests | XL | No test suite exists. Pre-commit hook runs ESLint only. |
 | Drop jQuery / Backbone (UI rewrite) | XL | 341 jQuery refs, 9 Backbone views. Far-future project. |

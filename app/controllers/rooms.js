@@ -269,7 +269,7 @@ module.exports = function() {
                 var user = req.user.toJSON();
                 user.room = room._id;
 
-                core.presence.join(req.socket.conn, room);
+                core.presence.join(req.socket.lcbConn, room);
                 req.socket.join(room._id);
                 res.json(room.toJSON(req.user));
             });
@@ -279,7 +279,7 @@ module.exports = function() {
             var user = req.user.toJSON();
             user.room = roomId;
 
-            core.presence.leave(req.socket.conn, roomId);
+            core.presence.leave(req.socket.lcbConn, roomId);
             req.socket.leave(roomId);
             res.json();
         },

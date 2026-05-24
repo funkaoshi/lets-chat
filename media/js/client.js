@@ -481,7 +481,10 @@
             that.getRooms(joinRooms);
             that.status.set('connected', true);
         });
-        this.socket.on('reconnect', function() {
+        // Socket.IO 4 moved the reconnect lifecycle off the socket itself
+        // onto the Manager (socket.io). The event payload changed too --
+        // it now passes the attempt count, but we don't use it.
+        this.socket.io.on('reconnect', function() {
             _.each(that.rooms.where({ joined: true }), function(room) {
                 that.rejoinRoom(room);
             });

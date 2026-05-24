@@ -5,7 +5,6 @@ var _ = require('lodash'),
     cookieParser = require('cookie-parser'),
     mongoose = require('mongoose'),
     passport = require('passport'),
-    passportSocketIo = require('passport.socketio'),
     BearerStrategy = require('passport-http-bearer'),
     BasicStrategy = require('passport-http').BasicStrategy,
     settings = require('./../config'),
@@ -33,7 +32,7 @@ function getProviders(core) {
     });
 }
 
-function setup(app, session, core) {
+function setup(app, sessionMiddleware, sessionOpts, core) {
 
     enabledProviders = getProviders(core);
 
@@ -72,31 +71,55 @@ function setup(app, session, core) {
     app.use(passport.initialize());
     app.use(passport.session());
 
-    session = _.extend(session, {
-        cookieParser: cookieParser,
-        passport: passport
-    });
-
-    var psiAuth = passportSocketIo.authorize(session);
-
-    app.io.use(function (socket, next) {
+    // Socket.IO auth bridge. Replaces passport.socketio (unmaintained since
+    // 2017, incompatible with Socket.IO 4). Two auth paths:
+    //
+    //   1. Bearer token in the connection query string (?token=...). Used
+    //      by API clients / hubot adapters. Looks up the User by token and
+    //      attaches to socket.request.user.
+    //   2. Session cookie. The compat layer's io.engine.use(sessionMiddleware)
+    //      has already populated socket.request.session from the cookie.
+    //      Here we deserialize passport.user from that session into a real
+    //      User document.
+    //
+    // Fails the connection (next(err)) when neither path succeeds -- the
+    // page renders fine for unauthenticated users but the socket won't
+    // connect, which matches the old behavior.
+    app.io.use(function(socket, next) {
         var User = mongoose.model('User');
-        if (socket.request._query && socket.request._query.token) {
-            User.findByToken(socket.request._query.token, function(err, user) {
-                if (err || !user) {
-                    return next('Fail');
-                }
+        var query = socket.handshake.query || {};
 
+        if (query.token) {
+            return User.findByToken(query.token, function(err, user) {
+                if (err || !user) { return next(new Error('Bad token')); }
                 socket.request.user = user;
                 socket.request.user.loggedIn = true;
                 socket.request.user.usingToken = true;
                 next();
             });
-        } else {
-            psiAuth(socket, next);
         }
 
+        var session = socket.request.session;
+        var passportSerialized = session && session.passport;
+        var userId = passportSerialized && passportSerialized.user;
+
+        if (!userId) {
+            return next(new Error('Not authenticated'));
+        }
+
+        passport.deserializeUser(userId, function(err, user) {
+            if (err || !user) { return next(new Error('Session user not found')); }
+            socket.request.user = user;
+            socket.request.user.loggedIn = true;
+            next();
+        });
     });
+
+    // Stash the session opts on the auth module so plugins can read them
+    // if they need the cookie name etc. (Previously passport.socketio was
+    // initialized with the full session object including cookieParser.)
+    setup._sessionOpts = sessionOpts;
+    setup._cookieParser = cookieParser;
 }
 
 function checkIfAccountLocked(username, cb) {

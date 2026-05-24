@@ -6,7 +6,7 @@ For the ongoing modernization status (shipped work, open items, known footguns),
 
 Self-hosted real-time team chat. Node.js + Express + Socket.IO + MongoDB. Users, rooms, messages, file uploads, @mentions.
 
-Stack: **express.oi** (Express 4 + Socket.IO 1.x wrapper) · **Mongoose** · **Nunjucks** templates · **Passport** auth · **connect-assets** for LESS/JS bundling · **Bootstrap 5** (prebuilt CSS + small jQuery modal shim in `media/js/legacy/bootstrap-modal-shim.js`).
+Stack: **Express 5** + **Socket.IO 4** (with an in-tree compat layer at `app/express-oi-compat.js` that preserves the `app.io.route()` / `req.io.route()` dual-dispatch API the controllers rely on) · **Mongoose** · **Nunjucks** templates · **Passport** auth · **connect-assets** for LESS/JS bundling · **Bootstrap 5** (prebuilt CSS + small jQuery modal shim in `media/js/legacy/bootstrap-modal-shim.js`).
 
 ## Running Locally
 
@@ -100,9 +100,8 @@ Multiple providers can be active simultaneously. Bearer token and HTTP Basic aut
 
 ## Package Notes
 
-- **`express.oi` 0.0.21** — pinned. Wraps Express 4 + Socket.IO 1.x. Do not update; replacing it requires rewriting all controller socket handlers.
-- **`passport.socketio` 3.6.2** — pinned. Session bridge between Passport and Socket.IO 1.x, tied to express.oi.
-- **`connect-assets` 5.3.0** — pinned. Bundles LESS and JS. Depends on `less` being present.
+- **`app/express-oi-compat.js`** — in-tree replacement for the unmaintained `express.oi` npm package. Reimplements the dual-dispatch trick (one handler serves both HTTP and Socket.IO) on top of native Express 5 + Socket.IO 4. Touching it can break any controller that uses `app.io.route()` or `req.io.route()`.
+- **`connect-assets` 5.3.0** — pinned. Bundles LESS and JS. Depends on `less` being present. Last remaining 2014-era pinned dep; the residual CVE chain comes from its transitives.
 
 ## ESLint
 

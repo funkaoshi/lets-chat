@@ -6,7 +6,10 @@ var util = require('util'),
 function SocketIoConnection(user, socket) {
     Connection.call(this, 'socket.io', user);
     this.socket = socket;
-    socket.conn = this;
+    // Socket.IO 1.x let us hang our LCB Connection off `socket.conn`, but
+    // Socket.IO 4's `socket.conn` is a read-only getter that returns the
+    // underlying engine.io Client. Use a custom-named property instead.
+    socket.lcbConn = this;
     socket.on('disconnect', this.disconnect.bind(this));
 }
 
@@ -15,7 +18,7 @@ util.inherits(SocketIoConnection, Connection);
 SocketIoConnection.prototype.disconnect = function() {
     this.emit('disconnect');
 
-    this.socket.conn = null;
+    this.socket.lcbConn = null;
     this.socket = null;
 };
 

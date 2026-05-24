@@ -11,7 +11,8 @@ require('colors');
 var _ = require('lodash'),
     path = require('path'),
     fs = require('fs'),
-    express = require('express.oi'),
+    express = require('./app/express-oi-compat'),
+    expressSession = require('express-session'),
     i18n = require('i18n'),
     bodyParser = require('body-parser'),
     cookieParser = require('cookie-parser'),
@@ -68,23 +69,25 @@ var sessionStore = MongoStore.create({
     mongoUrl: settings.database.uri
 });
 
-// Session
-var session = {
-    key: 'connect.sid',
+// Session config -- shared between HTTP (express-session) and Socket.IO
+// (the compat layer installs the middleware on both via io.session()).
+var sessionOpts = {
+    name: 'connect.sid',
     secret: settings.secrets.cookie,
     store: sessionStore,
     cookie: { secure: httpsEnabled },
     resave: false,
     saveUninitialized: true
 };
+var sessionMiddleware = expressSession(sessionOpts);
 
 // Set compression before any routes
 app.use(compression({ threshold: 512 }));
 
 app.use(cookieParser());
-app.io.session(session);
+app.io.session(sessionMiddleware);
 
-auth.setup(app, session, core);
+auth.setup(app, sessionMiddleware, sessionOpts, core);
 
 // Security protections
 app.use(helmet({
