@@ -116,20 +116,24 @@ app.use(helmet({
     }
 }));
 
-var bundles = {};
-app.use(require('connect-assets')({
-    paths: [
-        'media/js',
-        'media/less',
-        'node_modules'
-    ],
-    helperContext: bundles,
-    build: settings.env === 'production',
-    fingerprinting: settings.env === 'production',
-    servePath: 'media/dist'
-}));
+// Asset pipeline (in-tree replacement for connect-assets — see
+// app/assets.js for the why).
+var assets = require('./app/assets')({
+    jsPaths: ['media/js', 'node_modules'],
+    cssPaths: ['media/less', 'node_modules'],
+    jsEntries: ['vendor', 'chat', 'login', 'transcript'],
+    cssEntries: ['vendor', 'style'],
+    distDir: 'media/dist',
+    production: settings.env === 'production'
+});
 
-// Public
+// In dev, intercept requests for /media/dist/<name>.<ext> ahead of the
+// static handler and mtime-rebuild if any source changed. Production
+// builds once at startup (below) and never rebuilds.
+app.use(assets.middleware());
+
+// Public — serves /media/* including the built /media/dist/* files
+// the asset pipeline writes to disk.
 app.use('/media', express.static(__dirname + '/media', {
     maxAge: '364d'
 }));
@@ -148,18 +152,7 @@ var nun = nunjucks.configure('templates', {
     }
 });
 
-function wrapBundler(func) {
-    // This method ensures all assets paths start with "./"
-    // Making them relative, and not absolute
-    return function() {
-        return func.apply(func, arguments)
-                   .replace(/href="\//g, 'href="./')
-                   .replace(/src="\//g, 'src="./');
-    };
-}
-
-nun.addFilter('js', wrapBundler(bundles.js));
-nun.addFilter('css', wrapBundler(bundles.css));
+assets.installFilters(nun);
 nun.addGlobal('text_search', false);
 
 // i18n
@@ -212,7 +205,12 @@ mongoose.connection.on('disconnected', function() {
 // Go Time
 //
 
-function startApp() {
+async function startApp() {
+    // Build all JS / CSS bundles before we accept traffic. In dev, the
+    // assets middleware additionally rebuilds on-demand when sources
+    // change. In prod, this is the only build.
+    await assets.build();
+
     var port = httpsEnabled && settings.https.port ||
                httpEnabled && settings.http.port;
 

@@ -7,6 +7,7 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
+| _pending_ | connect-assets → in-tree concat + less 4 pipeline; CVE chain to 1 |
 | `5118e95` | Giphy API key out of the rendered DOM (server-side proxy) |
 | `9643d67` | Guard against undefined `openRooms` in client `joinRoom`/`leaveRoom` |
 | `c68ab19` | Stringify room IDs for Socket.IO 4 room targeting |
@@ -307,10 +308,98 @@ Four issues surfaced once the page actually rendered in a browser:
 | Start (after Node 20 bump) | 78 | 19 | 34 | 21 | 4 |
 | After build-time cull | 33 | 4 | 14 | 12 | 3 |
 | After vendor migration + sweetalert2 | 34 | 4 | 14 | 13 | 3 |
-| Current (post express.oi → Express 5) | 19 | 3 | 7 | 9 | 0 |
+| After express.oi → Express 5 | 19 | 3 | 7 | 9 | 0 |
+| Current (post connect-assets → in-tree) | 1 | 0 | 0 | 1 | 0 |
 
-Residual 19 are transitive deps of `connect-assets` 5.x (still pinned;
-the only remaining piece of the original 2014-era stack).
+The remaining moderate is `uuid@9` (direct dep), advisory only fires
+on `v3`/`v5`/`v6` with a `buf` arg — not how we use it. A bump to
+`uuid@11+` to clear the audit line is on the open list.
+
+### connect-assets → in-tree pipeline
+
+The last 2014-era pinned dep is gone. `connect-assets` 5.x pulled in
+`less@2.7.x`, which dragged the full `request` / `har-validator` /
+`hawk` / `tough-cookie` / `form-data` chain — the source of all 19
+residual CVEs after the Express 5 work. Same trade-off pattern as
+`express-oi-compat` and the sweetalert / bootstrap-modal shims: rather
+than rewrite the call sites (templates + bundle entries + LESS imports),
+keep the surface and replace what's underneath.
+
+- **In-tree asset pipeline.** New [app/assets.js](app/assets.js) (~190
+  lines). What it does:
+  - JS bundling: expands `//= require X` Sprockets-style directives in
+    each entry. Resolves `X` against `media/js` + `node_modules`.
+    Concatenates with a small `/* === path === */` header per chunk.
+  - LESS compilation: `less.render()` per entry, with the same paths for
+    `@import` resolution. `javascriptEnabled: true` since `hat.less`
+    uses backtick inline-JS for its `.translate3d(...)` mixin args (safe
+    here — all .less is committed in-tree).
+  - Build mode: synchronous at startup (await'd before `app.listen`).
+    In dev a mtime-checking middleware rebuilds any bundle whose sources
+    are newer than the last build.
+  - Nunjucks filters: `'<name>' | js` / `'<name>' | css` emit
+    `<script>` / `<link>` tags pointing at `/media/dist/<name>.<ext>`.
+    Mirrors the old `connect-assets` helper signature so the existing
+    `<$ 'vendor' | js | safe $>` template calls don't change.
+- **Serving.** Built files live under `media/dist/` on disk; the
+  existing `app.use('/media', express.static(...))` mount already
+  serves them. No separate dist mount, no in-memory cache layer.
+- **`less` bumped 2.7 → 4.6.** Modern `less` has only `tslib` /
+  `copy-anything` / `parse-node-version` as deps (vs the entire `request`
+  tree the 2.x line dragged). This single bump did most of the audit work.
+- **daterangepicker CSS inlined.** Previous setup had a hand-rolled
+  `<link rel="stylesheet" href="./media/dist/bootstrap-daterangepicker/daterangepicker.css">`
+  in [transcript.html](templates/transcript.html) that relied on
+  connect-assets surfacing arbitrary `node_modules/` files at
+  `/media/dist/`. Now `@import (inline)`'d into
+  [vendor.less](media/less/vendor.less) so the file gets baked into
+  `vendor.css` like every other vendor stylesheet. Transcript template
+  loses the orphan `<link>`.
+- **Wiring change in [app.js](app.js).** The old `app.use(connect-assets({...}))`
+  + `wrapBundler` (the absolute→relative URL rewrite that prevented
+  routes like `/transcript` from breaking) + `nun.addFilter('js', ...)`
+  + `nun.addFilter('css', ...)` block all collapses into:
+  `assets.middleware()` + `assets.installFilters(nun)`, plus an
+  `await assets.build()` inside `startApp()`. Filters emit absolute URLs
+  (`/media/dist/...`) directly — those resolve correctly from any route,
+  making `wrapBundler` unnecessary.
+
+CVE delta: **19 → 1**. The one remainder is direct `uuid@9` (used in
+`app/core/presence/connection.js` for `uuid.v4()`); the advisory is for
+`v3`/`v5`/`v6` with `buf` arg, so we're not actually vulnerable. A bump
+to `uuid@11+` to clear the audit noise is a separate, trivial change.
+
+Verification:
+- App boots clean inside the Docker dev stack; all 6 bundles
+  (vendor.{js,css}, style.css, chat.js, login.js, transcript.js) write
+  to `media/dist/` before `listen` and return 200 from the static mount.
+- Chat page emits `<script src="/media/dist/vendor.js">` +
+  `<script src="/media/dist/chat.js">` and the two CSS links; transcript
+  page emits its bundle pair with no orphan `<link>`.
+- font-awesome URLs in compiled CSS resolve to
+  `/media/font/vendor/font-awesome/...`; that path returns 200 via
+  the existing `/media` static mount.
+- daterangepicker selectors (75 in vendor.css) and bootstrap tokens
+  (37 `--bs-primary` refs) confirm the inline `@import (inline)`'s
+  resolved correctly.
+- Dev mtime rebuild: `touch media/less/style/base.less` followed by a
+  request to `/media/dist/style.css` regenerates the file. Same for JS.
+- `npm test` clean. `npm audit` 19 → 1.
+- 96 packages removed from `node_modules`.
+
+Browser-side smoke pass (UI clicks, real WebSocket, font glyphs render)
+still on the maintainer to walk — see the verification baseline at the
+bottom.
+
+#### Less 4 footgun
+
+`hat.less` (loaded by vendor.less and style.less) defines `.translate3d`
+and friends using backtick-style inline-JS to coerce numeric args into
+`px`. Less 4 disabled `javascriptEnabled` by default for safety. The
+compile failure was immediate (`Inline JavaScript is not enabled. Is it
+set in your options?`). Re-enabled in
+[app/assets.js](app/assets.js) — meaningless lever for us since no
+untrusted .less input ever lands in the pipeline.
 
 ### Giphy key proxied server-side
 
@@ -351,8 +440,9 @@ Rough priority order. Sizes are S/M/L/XL where XL is multi-day.
 
 | Item | Size | Notes |
 |------|:----:|-------|
-| Replace `connect-assets` | M/L | Last 2014-era pinned dep; source of all residual CVEs. Touches every asset URL. |
-| moment → dayjs/Luxon | M | moment is maintenance-mode. Surface area used is small. |
+| Bump `uuid` 9 → 14 | S | One call site (`uuid.v4()`); audit advisory is for `buf` arg on `v3`/`v5`/`v6` so not actually vulnerable, but clears the last audit line. |
+| moment → dayjs/Luxon | M | moment is maintenance-mode. Blocked on replacing `bootstrap-daterangepicker` (hard moment dep) before full removal. |
+| Replace `bootstrap-daterangepicker` | M | Hard dep on moment. Litepicker / flatpickr are dayjs-friendly. Unlocks the moment cleanup above. |
 | Actual tests | XL | No test suite exists. Pre-commit hook runs ESLint only. |
 | Drop jQuery / Backbone (UI rewrite) | XL | 341 jQuery refs, 9 Backbone views. Far-future project. |
 

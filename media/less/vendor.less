@@ -30,3 +30,8 @@
 @import (inline) '../js/legacy/jquery.atwho.css';
 @import (inline) '../../node_modules/@selectize/selectize/dist/css/selectize.css';
 @import (inline) '../../node_modules/@selectize/selectize/dist/css/selectize.bootstrap5.css';
+
+/* daterangepicker CSS — only used on the transcript page, but inlining
+ * here avoids carrying a per-page CSS bundle. ~7KB compressed. Was
+ * previously served via connect-assets at /media/dist/bootstrap-daterangepicker/. */
+@import (inline) '../../node_modules/bootstrap-daterangepicker/daterangepicker.css';
