@@ -235,7 +235,11 @@
             // Add room id to User Open rooms list.
             //
 
-            var orooms = that.user.get('openRooms');
+            // account:whoami and rooms:list both kick off from the
+            // `connect` handler in parallel. With Socket.IO 4's faster ack
+            // delivery, joinRoom can fire before `that.user` is populated,
+            // so default openRooms to [] rather than throwing.
+            var orooms = that.user.get('openRooms') || [];
             if ( ! _.includes(orooms,id)) {
               orooms.push(id);
             }
@@ -258,8 +262,9 @@
             var room = this.rooms.get(this.rooms.last.get('id'));
             this.switchRoom(room && room.get('joined') ? room.id : '');
         }
-        // Remove room id from User open rooms list.
-        var orooms = this.user.get('openRooms');
+        // Remove room id from User open rooms list. Default to [] in
+        // case user model isn't populated yet (see joinRoom).
+        var orooms = this.user.get('openRooms') || [];
         orooms = _.without(orooms, id);
         this.socket.emit('account:profile', {'openRooms': orooms});
 
