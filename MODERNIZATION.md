@@ -7,6 +7,7 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
+| _pending_ | uuid 9 → 14, add CI audit gate; clean tree at 0 advisories |
 | `2822954` | connect-assets → in-tree concat + less 4 pipeline; CVE chain to 1 |
 | `5118e95` | Giphy API key out of the rendered DOM (server-side proxy) |
 | `9643d67` | Guard against undefined `openRooms` in client `joinRoom`/`leaveRoom` |
@@ -309,11 +310,31 @@ Four issues surfaced once the page actually rendered in a browser:
 | After build-time cull | 33 | 4 | 14 | 12 | 3 |
 | After vendor migration + sweetalert2 | 34 | 4 | 14 | 13 | 3 |
 | After express.oi → Express 5 | 19 | 3 | 7 | 9 | 0 |
-| Current (post connect-assets → in-tree) | 1 | 0 | 0 | 1 | 0 |
+| After connect-assets → in-tree | 1 | 0 | 0 | 1 | 0 |
+| Current (post uuid bump + CI audit gate) | 0 | 0 | 0 | 0 | 0 |
 
-The remaining moderate is `uuid@9` (direct dep), advisory only fires
-on `v3`/`v5`/`v6` with a `buf` arg — not how we use it. A bump to
-`uuid@11+` to clear the audit line is on the open list.
+The tree is clean. The CI audit job (`npm audit --omit=dev
+--audit-level=moderate`) gates further regressions on master + PRs.
+
+### uuid 9 → 14 + CI audit gate
+
+Clears the last `npm audit` line and installs a forcing function so
+future regressions can't sneak in silently.
+
+- **uuid bumped 9 → 14.** The advisory (GHSA-w5hq-g745-h8pq) only
+  fires on `v3`/`v5`/`v6` with a `buf` arg; our single call site
+  (`uuid.v4()` in [app/core/presence/connection.js](app/core/presence/connection.js))
+  was never actually vulnerable, but the audit line was noise. v14
+  still exposes `.v4` on the default CJS require — zero code change
+  needed.
+- **CI audit job.** [.github/workflows/ci.yml](.github/workflows/ci.yml)
+  gains an `audit` job alongside `lint` and `docker-build`:
+  `npm audit --omit=dev --audit-level=moderate`. Fails on any
+  moderate-or-worse advisory in the prod dep tree. Dev deps scoped out
+  — they don't ship.
+
+CVE delta: **1 → 0**. Tree is clean for the first time in this
+modernization pass.
 
 ### connect-assets → in-tree pipeline
 
@@ -440,7 +461,6 @@ Rough priority order. Sizes are S/M/L/XL where XL is multi-day.
 
 | Item | Size | Notes |
 |------|:----:|-------|
-| Bump `uuid` 9 → 14 | S | One call site (`uuid.v4()`); audit advisory is for `buf` arg on `v3`/`v5`/`v6` so not actually vulnerable, but clears the last audit line. |
 | moment → dayjs/Luxon | M | moment is maintenance-mode. Blocked on replacing `bootstrap-daterangepicker` (hard moment dep) before full removal. |
 | Replace `bootstrap-daterangepicker` | M | Hard dep on moment. Litepicker / flatpickr are dayjs-friendly. Unlocks the moment cleanup above. |
 | Actual tests | XL | No test suite exists. Pre-commit hook runs ESLint only. |

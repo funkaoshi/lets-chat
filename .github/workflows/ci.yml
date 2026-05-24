@@ -17,6 +17,22 @@ jobs:
       - run: npm ci --legacy-peer-deps
       - run: npm test
 
+  audit:
+    # Fails the build on any moderate-or-worse CVE in the production
+    # dependency tree. Dev deps are scoped out — they don't ship.
+    # The bar is currently zero advisories; if a transitive CVE lands
+    # the noise should be a forcing function (bump dep, replace pkg,
+    # or, last resort, justify the suppression here).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci --legacy-peer-deps
+      - run: npm audit --omit=dev --audit-level=moderate
+
   docker-build:
     runs-on: ubuntu-latest
     steps:
