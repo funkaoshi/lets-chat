@@ -7,7 +7,7 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
-| _pending_ | express.oi → Express 5 + Socket.IO 4 via in-tree compat layer; passport.socketio replaced |
+| `d75ec67` | express.oi → Express 5 + Socket.IO 4 via in-tree compat layer; passport.socketio replaced |
 | `64f29db` | BS5 visual fixes: 18-col grid override, `:root` token cascade, `.hide` shim, modal stacking-context |
 | `c62dee1` | Bootstrap 3 → 5 (prebuilt CSS + modal shim, ~8k LOC of vendored LESS gone) |
 | `be515ee` | Docker dev flow: bind-mount + `node --watch` override, bootstrap.sh first-run helper |
