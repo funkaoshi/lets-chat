@@ -7,6 +7,8 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
+| `9643d67` | Guard against undefined `openRooms` in client `joinRoom`/`leaveRoom` |
+| `c68ab19` | Stringify room IDs for Socket.IO 4 room targeting |
 | `d75ec67` | express.oi → Express 5 + Socket.IO 4 via in-tree compat layer; passport.socketio replaced |
 | `64f29db` | BS5 visual fixes: 18-col grid override, `:root` token cascade, `.hide` shim, modal stacking-context |
 | `c62dee1` | Bootstrap 3 → 5 (prebuilt CSS + modal shim, ~8k LOC of vendored LESS gone) |
@@ -64,6 +66,30 @@ Verification: HTTP register/login/whoami via curl, then Socket.IO
 handshake from inside the container with the session cookie + emit
 `account:whoami`, `rooms:list`, `extras:emotes:list` — all return
 correct payloads. Backbone-side `npm test` clean.
+
+#### Smoke-test fixes (committed separately)
+
+Two issues surfaced once the page rendered in a real browser. Both
+were Socket.IO 1.x quirks that the codebase had silently relied on:
+
+- **Room targeting silently broken.** Sending a chat message
+  created the document and acked the sender, but the `messages:new`
+  broadcast that echoes it back to everyone in the room landed on no
+  one. Cause: Socket.IO 1.x coerced room names to strings inside
+  `socket.join()` and the room registry; SIO 4 stores them as-is in
+  a Set. The code mixed `room._id` (ObjectId object) on the join side
+  with `room.id` (string virtual) on the broadcast side, so Set
+  membership never matched. Stringified both sides in
+  [app/controllers/rooms.js](app/controllers/rooms.js) +
+  [app/controllers/files.js](app/controllers/files.js) (`c68ab19`).
+- **`openRooms` race on join.** The client's `connect` handler fires
+  `account:whoami` and `rooms:list` in parallel. SIO 1.x's older ack
+  delivery happened to land whoami first; SIO 4 is faster and
+  `joinRoom` started running before `that.user` was populated. `user.get('openRooms')`
+  returned undefined and `.push(id)` threw. Defaulted to `[]` in
+  `joinRoom`/`leaveRoom` ([media/js/client.js](media/js/client.js),
+  `9643d67`). A proper fix is to sequence the join behind user
+  readiness, which belongs in the eventual jQuery/Backbone removal.
 
 ### Phase 1 cleanup (this batch)
 
@@ -304,19 +330,30 @@ Rough priority order. Sizes are S/M/L/XL where XL is multi-day.
 
 ## Verification baseline
 
-Boot via:
+First-time setup (creates `docker/.env`, generates `LCB_SECRETS_COOKIE`):
 
 ```
-docker compose -f docker/docker-compose.yml up --build -d
+./docker/bootstrap.sh
 ```
+
+Then bring the dev stack up (bind mount + `node --watch`):
+
+```
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up
+```
+
+For a prod-ish smoke (code baked into the image, requires `--build` on
+every change), drop the second `-f`.
 
 App at <http://localhost:8080>. Confirmed working in browser:
 
 - Account registration with email validation
-- Login + session
+- Login + session (HTTP) -> Socket.IO handshake picks up session cookie
 - Room creation, joining, archive (confirm modal)
-- Sending messages
-- Edit-room button
+- Sending messages (round-trip: emit `messages:create`, server echoes
+  `messages:new` to all sockets in the room)
+- Edit-room button (modal opens, save round-trips via Backbone-delegated
+  click handler)
 - @-mention autocomplete (atwho)
 - File upload (dropzone)
 - Keyboard shortcuts (backbone.keys)
