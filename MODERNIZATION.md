@@ -7,7 +7,7 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
-| _pending_ | Giphy API key out of the rendered DOM (server-side proxy) |
+| `5118e95` | Giphy API key out of the rendered DOM (server-side proxy) |
 | `9643d67` | Guard against undefined `openRooms` in client `joinRoom`/`leaveRoom` |
 | `c68ab19` | Stringify room IDs for Socket.IO 4 room targeting |
 | `d75ec67` | express.oi → Express 5 + Socket.IO 4 via in-tree compat layer; passport.socketio replaced |
