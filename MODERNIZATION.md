@@ -7,7 +7,7 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
-| _pending_ | uuid 9 → 14, add CI audit gate; clean tree at 0 advisories |
+| `2dda2fe` | uuid 9 → 14, add CI audit gate; clean tree at 0 advisories |
 | `2822954` | connect-assets → in-tree concat + less 4 pipeline; CVE chain to 1 |
 | `5118e95` | Giphy API key out of the rendered DOM (server-side proxy) |
 | `9643d67` | Guard against undefined `openRooms` in client `joinRoom`/`leaveRoom` |
