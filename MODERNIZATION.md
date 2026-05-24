@@ -7,6 +7,7 @@ Updated as work lands; sections move from "Open" to "Shipped" as commits go in.
 
 | SHA | What |
 |-----|------|
+| _pending_ | BS5 visual fixes: 18-col grid override, `:root` token cascade, `.hide` shim, modal stacking-context |
 | `c62dee1` | Bootstrap 3 → 5 (prebuilt CSS + modal shim, ~8k LOC of vendored LESS gone) |
 | `be515ee` | Docker dev flow: bind-mount + `node --watch` override, bootstrap.sh first-run helper |
 | `f9c263c` | Phase 1: drop XMPP, Multer 2, ESLint 9 flat config, GH Actions CI, fail-fast on default cookie secret |
@@ -93,6 +94,43 @@ Programmatic verification: `npm test` clean; vendor.css compiles with
 BS5 selectors present; all asset URLs return 200; templates contain
 zero BS3-removed class names. Browser-side smoke pass still on the
 maintainer to walk — see the verification baseline at the bottom.
+
+### BS5 visual fixes uncovered during smoke test
+
+Four issues surfaced once the page actually rendered in a browser:
+
+- **All room panes visible at once.** BS3 had a `.hide` utility class
+  that templates and Backbone views toggled to switch panes; BS4 renamed
+  it to `.d-none`. Restored a one-line `.hide { display: none !important }`
+  shim in [lcb-overrides.less](media/less/lcb-overrides.less) rather
+  than touch every call site.
+- **Brand colors not applied.** `:root` overrides for `--bs-primary`
+  etc. were loaded BEFORE bootstrap.css, so BS5's defaults won the
+  cascade. Split [lcb-tokens.less](media/less/lcb-tokens.less) into a
+  compile-time half (LESS variables + mixin shims, still loaded first)
+  and the new [lcb-overrides.less](media/less/lcb-overrides.less) that
+  carries the `:root` block and loads AFTER bootstrap.css.
+- **18-column grid broken in horizontal forms.** Setting
+  `--bs-columns: 18` only affects auto-layout `.col`; BS5's prebuilt
+  `.col-sm-N` classes hardcode 12-col math. A row of `.col-sm-6 +
+  .col-sm-11` was wrapping to two lines because 50% + 92% > 100%.
+  Added explicit `.col-sm-{6,9,10,11,14,18}` rules using
+  `calc(N/18 * 100%)` at the `sm+` breakpoint to override BS5's
+  defaults.
+- **Modal backdrop blocked modals (the big one).** `.lcb-client` uses
+  `position: fixed`, which creates a CSS stacking context. BS5 appends
+  `.modal-backdrop` to `<body>` (z-index 1050), but the `.modal`
+  element stays inside `.lcb-client`. The body-level backdrop ended up
+  painting above everything inside `.lcb-client`, so modals looked
+  dimmed and were unclickable. Reparenting the modal to body (the
+  obvious fix) would have broken Backbone's delegated event handlers on
+  RoomView -- the room-edit modal lives inside `.lcb-room` so
+  `.submit-edit-room`/`.archive-room` clicks rely on bubbling through
+  it. CSS-only fix instead: bump `.lcb-client` z-index above the
+  backdrop (1060), hide the now-pointless body-level backdrop, and
+  synthesize a replacement backdrop inside `.lcb-client` via a
+  `::before` pseudo on `.lcb-client:has(.modal.show)`. Requires `:has()`
+  selector support (Safari 15.4+, Chrome 105+, Firefox 121+).
 
 ### Docker dev flow
 

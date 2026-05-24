@@ -9,11 +9,15 @@
     src: local('Pacifico Regular'), local('Pacifico-Regular'), url('../font/pacifico.woff') format('woff');
 }
 
-/* LCB design tokens — must come before bootstrap.css so :root overrides win. */
+/* LCB design tokens (LESS vars + mixin shims). Resolves at compile time. */
 @import 'lcb-tokens.less';
 
 /* Bootstrap 5 prebuilt CSS (no LESS source). Bumped from BS3.x. */
 @import (inline) '../../node_modules/bootstrap/dist/css/bootstrap.css';
+
+/* LCB overrides applied AFTER bootstrap.css — :root --bs-* overrides,
+ * 18-col grid rules, .hide utility. Order matters here. */
+@import 'lcb-overrides.less';
 
 /* Font Awesome — still using the vendored LESS source. */
 @import 'vendor/font-awesome/font-awesome.less';

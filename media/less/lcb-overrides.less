@@ -1,0 +1,101 @@
+/**
+ * Let's Chat overrides applied AFTER bootstrap.css. Anything that depends on
+ * CSS cascade order goes here — variable resolution alone (lcb-tokens.less)
+ * isn't enough because BS5's bootstrap.css redefines :root --bs-* values.
+ */
+
+/* Brand colors — match the BS3 customization in the old variables.less. */
+:root {
+    --bs-primary: #3a7fc3;        /* darken(#428bca, 6.5%) */
+    --bs-primary-rgb: 58, 127, 195;
+    --bs-success: #5cb85c;
+    --bs-success-rgb: 92, 184, 92;
+    --bs-info: #5bc0de;
+    --bs-info-rgb: 91, 192, 222;
+    --bs-warning: #f0ad4e;
+    --bs-warning-rgb: 240, 173, 78;
+    --bs-danger: #d9534f;
+    --bs-danger-rgb: 217, 83, 79;
+
+    /* Custom grid width (matches the old @grid-columns: 18) — note that this
+     * only affects .row > .col auto-layout. BS5's pre-compiled .col-sm-N
+     * classes hardcode 12-col math; the 18-col rules below replace those at
+     * the sm+ breakpoint to match the project's existing template usage. */
+    --bs-columns: 18;
+    --bs-gutter-x: 40px;
+}
+
+/*
+ * 18-column grid rules. BS5's prebuilt .col-sm-N classes are compiled to a
+ * 12-col grid (.col-sm-6 = 50%, .col-sm-9 = 75%, etc.), but our templates
+ * use 18-col widths (the room edit modal has .col-sm-6 + .col-sm-11 on a
+ * row, which only fits if 6+11 = 17/18). These rules override BS5's at the
+ * `sm` breakpoint and up — matching what the old vendored BS3 LESS emitted
+ * via `@grid-columns: 18`.
+ *
+ * Only the column widths actually used in our templates are listed. If
+ * future templates use other col-sm-N values, add them here.
+ */
+@media (min-width: 768px) {
+    .col-sm-6  { flex: 0 0 auto; width: calc(6  / 18 * 100%); }
+    .col-sm-9  { flex: 0 0 auto; width: calc(9  / 18 * 100%); }
+    .col-sm-10 { flex: 0 0 auto; width: calc(10 / 18 * 100%); }
+    .col-sm-11 { flex: 0 0 auto; width: calc(11 / 18 * 100%); }
+    .col-sm-14 { flex: 0 0 auto; width: calc(14 / 18 * 100%); }
+    .col-sm-18 { flex: 0 0 auto; width: 100%; }
+
+    .offset-sm-2 { margin-left: calc(2 / 18 * 100%); }
+}
+
+/*
+ * Bootstrap 3 ".hide" utility class — removed in BS4/5 (replaced by .d-none).
+ * Templates and Backbone views toggle this class to show/hide room panes,
+ * the rooms browser, and the generated-token block. Restoring it as a CSS
+ * rule keeps every call site working without per-template renames.
+ */
+.hide {
+    display: none !important;
+}
+
+/*
+ * Modal stacking-context fix.
+ *
+ * .lcb-client uses `position: fixed`, which creates a CSS stacking context.
+ * BS5 appends .modal-backdrop to <body> (z-index 1050), but the .modal
+ * element itself stays where it is in the DOM -- inside .lcb-client. The
+ * result: the body-level backdrop paints above EVERYTHING inside .lcb-client,
+ * including the modal. The modal looks dimmed and is unclickable.
+ *
+ * Reparenting the modal to body (the obvious fix) breaks Backbone's
+ * delegated event handlers on RoomView, since `.submit-edit-room` and
+ * `.archive-room` clicks would no longer bubble through `.lcb-room`. So
+ * we fix it CSS-only:
+ *
+ *   1. Bump .lcb-client's z-index above the backdrop (1050). Now the whole
+ *      .lcb-client stacking context paints above the body-level backdrop,
+ *      and modals inside paint correctly relative to .lcb-client.
+ *   2. Hide the now-pointless body-level backdrop -- it's covered by
+ *      .lcb-client's #222 background anyway.
+ *   3. Synthesize a backdrop INSIDE .lcb-client via a ::before pseudo on
+ *      .lcb-client when any descendant .modal.show is open. The pseudo
+ *      lives in .lcb-client's stacking context, paints above the chat UI
+ *      but below the modal (z-index 1054, modal is 1055).
+ *
+ * Requires :has() selector support (Safari 15.4+, Chrome 105+, FF 121+).
+ */
+.lcb-client {
+    z-index: 1060;
+}
+
+.modal-backdrop {
+    display: none !important;
+}
+
+.lcb-client:has(.modal.show)::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1054;
+    pointer-events: none;
+}

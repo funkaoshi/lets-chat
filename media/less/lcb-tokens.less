@@ -1,29 +1,10 @@
 /**
- * Let's Chat design tokens — overrides for Bootstrap 5's CSS custom properties.
- * Loaded BEFORE bootstrap.css so :root vars below take effect during cascade.
- *
- * Bootstrap 5 exposes most theming knobs via --bs-* CSS custom properties on
- * :root and component scopes. This replaces what the old vendored Bootstrap 3
- * LESS tree configured via @brand-*/@gray-*/@grid-columns LESS variables.
+ * Let's Chat LESS-level tokens — variables and mixin shims that need to
+ * resolve at compile time, BEFORE bootstrap.css is concatenated into the
+ * vendor bundle. The cascade-sensitive overrides (CSS custom properties,
+ * custom grid columns, the .hide utility) live in lcb-overrides.less and
+ * are loaded AFTER bootstrap.css.
  */
-
-/* Brand colors — match the BS3 customization in the old variables.less. */
-:root {
-    --bs-primary: #3a7fc3;        /* darken(#428bca, 6.5%) */
-    --bs-primary-rgb: 58, 127, 195;
-    --bs-success: #5cb85c;
-    --bs-success-rgb: 92, 184, 92;
-    --bs-info: #5bc0de;
-    --bs-info-rgb: 91, 192, 222;
-    --bs-warning: #f0ad4e;
-    --bs-warning-rgb: 240, 173, 78;
-    --bs-danger: #d9534f;
-    --bs-danger-rgb: 217, 83, 79;
-
-    /* Custom 18-column grid (matches @grid-columns: 18 in the old setup). */
-    --bs-columns: 18;
-    --bs-gutter-x: 40px;
-}
 
 /* Legacy LESS variables still referenced by media/less/style/**. Mapped to
  * literal pixel values (Bootstrap 3 defaults) so the existing @media queries
@@ -36,7 +17,7 @@
 @screen-md-max:  1199px;
 @screen-lg-min:  1200px;
 
-/* Brand colors as LESS vars too, for the same legacy-style.less reason. */
+/* Brand colors as LESS vars, for the few spots that compute against them. */
 @brand-primary: #3a7fc3;
 @brand-success: #5cb85c;
 @brand-info:    #5bc0de;
